@@ -1,9 +1,48 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Sidebar from '../../components/Sidebar'
-import { Save, Shield, Globe, Cpu } from 'lucide-react'
+import { Save, Shield, Globe, Cpu, CheckCircle } from 'lucide-react'
 
 export default function SettingsPage() {
+    const [config, setConfig] = useState({
+        stratum: 'stratum+tcp://quai.pool.bolt-evm.com:3333',
+        fallback: 'stratum+tcp://quai.backup-pool.com:4444',
+        wallet: '0x71C7656EC7ab88b098defB751B7401B5f6d8976F',
+        intensity: 'Medium (Standard)',
+        autoDiff: true
+    });
+    const [saved, setSaved] = useState(false);
+
+    useEffect(() => {
+        const stored = localStorage.getItem('miner_state');
+        if (stored) {
+            const state = JSON.parse(stored);
+            setConfig(prev => ({
+                ...prev,
+                wallet: state.wallet || prev.wallet,
+                autoDiff: state.autoDiff !== undefined ? state.autoDiff : prev.autoDiff,
+                intensity: state.intensity || prev.intensity
+            }));
+        }
+    }, []);
+
+    const handleSave = () => {
+        const stored = localStorage.getItem('miner_state');
+        let state = stored ? JSON.parse(stored) : {};
+
+        const newState = {
+            ...state,
+            wallet: config.wallet,
+            intensity: config.intensity,
+            autoDiff: config.autoDiff
+        };
+
+        localStorage.setItem('miner_state', JSON.stringify(newState));
+        setSaved(true);
+        setTimeout(() => setSaved(false), 3000);
+    };
+
     return (
         <div className="page-container">
             <Sidebar />
@@ -21,11 +60,19 @@ export default function SettingsPage() {
                         </div>
                         <div className="form-group">
                             <label>Stratum URL</label>
-                            <input type="text" defaultValue="stratum+tcp://quai.pool.bolt-evm.com:3333" />
+                            <input
+                                type="text"
+                                value={config.stratum}
+                                onChange={(e) => setConfig({ ...config, stratum: e.target.value })}
+                            />
                         </div>
                         <div className="form-group">
                             <label>Fallback Pool</label>
-                            <input type="text" defaultValue="stratum+tcp://quai.backup-pool.com:4444" />
+                            <input
+                                type="text"
+                                value={config.fallback}
+                                onChange={(e) => setConfig({ ...config, fallback: e.target.value })}
+                            />
                         </div>
                     </div>
 
@@ -36,7 +83,11 @@ export default function SettingsPage() {
                         </div>
                         <div className="form-group">
                             <label>Quai Wallet Address</label>
-                            <input type="text" defaultValue="0x71C7656EC7ab88b098defB751B7401B5f6d8976F" />
+                            <input
+                                type="text"
+                                value={config.wallet}
+                                onChange={(e) => setConfig({ ...config, wallet: e.target.value })}
+                            />
                         </div>
                     </div>
 
@@ -46,24 +97,34 @@ export default function SettingsPage() {
                             <h3>Performance</h3>
                         </div>
                         <div className="form-group checkbox">
-                            <input type="checkbox" defaultChecked />
+                            <input
+                                type="checkbox"
+                                checked={config.autoDiff}
+                                onChange={(e) => setConfig({ ...config, autoDiff: e.target.checked })}
+                            />
                             <label>Auto-adjust difficulty (VARDIFF)</label>
                         </div>
                         <div className="form-group">
                             <label>Mining Intensity</label>
-                            <select>
-                                <option>Low (Power Saving)</option>
-                                <option selected>Medium (Standard)</option>
-                                <option>High (Max Performance)</option>
+                            <select
+                                value={config.intensity}
+                                onChange={(e) => setConfig({ ...config, intensity: e.target.value })}
+                            >
+                                <option value="Low (Power Saving)">Low (Power Saving)</option>
+                                <option value="Medium (Standard)">Medium (Standard)</option>
+                                <option value="High (Max Performance)">High (Max Performance)</option>
                             </select>
                         </div>
                     </div>
                 </div>
 
-                <button className="btn-primary flex-items save-btn">
-                    <Save size={20} />
-                    <span>Save Configuration</span>
-                </button>
+                <div className="footer-actions">
+                    <button className="btn-primary flex-items save-btn" onClick={handleSave}>
+                        <Save size={20} />
+                        <span>{saved ? 'Configuration Saved' : 'Save Configuration'}</span>
+                    </button>
+                    {saved && <div className="save-toast animate-fade-in"><CheckCircle size={16} /> Updated successfully</div>}
+                </div>
             </main>
 
             <style jsx>{`
@@ -83,8 +144,12 @@ export default function SettingsPage() {
           outline: none;
         }
         input[type="text"]:focus { border-color: var(--accent-cyan); }
-        .save-btn { align-self: flex-start; }
+        .footer-actions { display: flex; align-items: center; gap: 20px; }
+        .save-btn { min-width: 200px; }
+        .save-toast { color: #00ff7f; font-size: 14px; display: flex; align-items: center; gap: 8px; }
         .flex-items { display: flex; align-items: center; gap: 8px; }
+        .animate-fade-in { animation: fadeIn 0.3s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
       `}</style>
         </div>
     )

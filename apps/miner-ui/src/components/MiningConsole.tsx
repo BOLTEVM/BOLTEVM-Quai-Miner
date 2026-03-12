@@ -45,7 +45,7 @@ export default function MiningConsole() {
           // Occasionally simulate solution found on block update to keep it feeling active but linked to real time
           if (Math.random() > 0.4) {
             const hash = Math.random().toString(16).substring(2, 10);
-            addLog(`Share submitted: 0x${hash}...`, 'info');
+            addLog(`POW Share submitted: 0x${hash}... (Pending Validation)`, 'info');
           }
           lastBlock = data.blockHeight;
         }
