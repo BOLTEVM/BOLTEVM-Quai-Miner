@@ -5,7 +5,7 @@ export const metadata: Metadata = {
     title: 'BoltEVM Quai Miner',
     description: 'Premium Quai Network Mining Interface',
     icons: {
-        icon: '/0.png',
+        icon: '/0logov3.png',
     },
 }
 

@@ -4,7 +4,7 @@ export default function Sidebar() {
   return (
     <aside className="sidebar glass-card">
       <div className="logo-section">
-        <img src="/0.png" alt="BoltEVM Logo" className="logo" />
+        <img src="/0logov3.png" alt="BoltEVM Logo" className="logo" />
         <h2>BoltEVM</h2>
       </div>
       <nav className="nav-menu">
