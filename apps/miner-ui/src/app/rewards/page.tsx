@@ -53,11 +53,14 @@ export default function RewardsPage() {
                 <section className="rewards-summary">
                     <div className="glass-card summary-item">
                         <span className="label">Unpaid Balance</span>
-                        <h2>{rewardsData.unpaidBalance}</h2>
-                        <button className="btn-primary small">Withdraw</button>
+                        <h2 className="glow-text">{rewardsData.unpaidBalance}</h2>
+                        <button
+                            className="btn-primary small"
+                            disabled={true}
+                        >Withdraw</button>
                     </div>
                     <div className="glass-card summary-item">
-                        <span className="label">Total Paid</span>
+                        <span className="label">Total Paid (Protocol Balance)</span>
                         <h2>{rewardsData.totalPaid}</h2>
                     </div>
                     <div className="glass-card summary-item">
@@ -67,20 +70,26 @@ export default function RewardsPage() {
                 </section>
 
                 <div className="glass-card">
-                    <h3>Transaction History</h3>
-                    <ul className="reward-list">
-                        {rewardsData.transactions.map((r: any) => (
-                            <li key={r.id}>
-                                <div className="reward-icon"><ArrowDownRight size={18} /></div>
-                                <div className="reward-info">
-                                    <span className="reward-type">{r.type}</span>
-                                    <span className="reward-date">{r.date}</span>
-                                </div>
-                                <div className="reward-amount">{r.amount}</div>
-                                <div className="reward-status">{r.status}</div>
-                            </li>
-                        ))}
-                    </ul>
+                    <h3>Recent History</h3>
+                    {rewardsData.transactions.length > 0 ? (
+                        <ul className="reward-list">
+                            {rewardsData.transactions.map((r: any) => (
+                                <li key={r.id}>
+                                    <div className="reward-icon"><ArrowDownRight size={18} /></div>
+                                    <div className="reward-info">
+                                        <span className="reward-type">{r.type}</span>
+                                        <span className="reward-date">{r.date}</span>
+                                    </div>
+                                    <div className="reward-amount">{r.amount}</div>
+                                    <div className="reward-status">{r.status}</div>
+                                </li>
+                            ))}
+                        </ul>
+                    ) : (
+                        <div className="empty-state">
+                            <p>No transactions found for this address on Cyprus-1.</p>
+                        </div>
+                    )}
                 </div>
             </main>
 
@@ -115,6 +124,7 @@ export default function RewardsPage() {
         .reward-amount { font-weight: 700; color: var(--accent-cyan); }
         .reward-status { font-size: 12px; color: #00ff7f; font-weight: 600; }
         .wallet-span { color: var(--accent-cyan); font-family: monospace; font-size: 14px; }
+        .empty-state { padding: 40px; text-align: center; color: var(--text-secondary); }
       `}</style>
         </div>
     )

@@ -20,10 +20,10 @@ export default function Dashboard() {
     const fetchStats = async () => {
       try {
         const storedState = localStorage.getItem('miner_state');
-        let walletParam = '';
+        let walletAddress = '';
         if (storedState) {
           const state = JSON.parse(storedState);
-          walletParam = `?address=${state.wallet}`;
+          walletAddress = state.wallet;
 
           let localHashrate = '0.0 GH/s';
           if (state.active) {
@@ -40,7 +40,7 @@ export default function Dashboard() {
           }
         }
 
-        const response = await fetch(`/api/quai${walletParam}`);
+        const response = await fetch(`/api/quai?address=${walletAddress}`);
         const data = await response.json();
         setStats(prev => ({
           ...prev,
@@ -53,21 +53,10 @@ export default function Dashboard() {
     };
     fetchStats();
 
-    // Live jitter for local hashrate
-    const interval = setInterval(() => {
-      setStats(prev => {
-        if (prev.localHashrate === '0.0 GH/s' || prev.localHashrate === '...') return prev;
-        const base = parseFloat(prev.localHashrate);
-        const unit = prev.localHashrate.split(' ')[1] || '';
-        const jitter = (Math.random() - 0.5) * 5;
-        return {
-          ...prev,
-          localHashrate: `${(base + jitter).toFixed(1)} ${unit}`
-        };
-      });
-    }, 4000);
+    // Refresh stats every 30s for real data
+    const refreshInterval = setInterval(fetchStats, 30000);
 
-    return () => clearInterval(interval);
+    return () => clearInterval(refreshInterval);
   }, []);
 
   return (
