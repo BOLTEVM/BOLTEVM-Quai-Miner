@@ -13,6 +13,7 @@ export default function Dashboard() {
     totalRewards: '...',
     activeWorkers: '0 / 0'
   });
+  const [isMining, setIsMining] = useState(false);
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -25,6 +26,7 @@ export default function Dashboard() {
 
           let localHashrate = '0.0 GH/s';
           if (state.active) {
+            setIsMining(true);
             if (state.mode === 'gpu') localHashrate = '450.5 GH/s';
             else if (state.mode === 'cpu') localHashrate = '12.2 MH/s';
             else if (state.mode === 'dual') localHashrate = '462.7 total';
@@ -49,6 +51,22 @@ export default function Dashboard() {
       }
     };
     fetchStats();
+
+    // Live jitter for local hashrate
+    const interval = setInterval(() => {
+      setStats(prev => {
+        if (prev.localHashrate === '0.0 GH/s' || prev.localHashrate === '...') return prev;
+        const base = parseFloat(prev.localHashrate);
+        const unit = prev.localHashrate.split(' ')[1] || '';
+        const jitter = (Math.random() - 0.5) * 5;
+        return {
+          ...prev,
+          localHashrate: `${(base + jitter).toFixed(1)} ${unit}`
+        };
+      });
+    }, 4000);
+
+    return () => clearInterval(interval);
   }, []);
 
   return (
@@ -77,9 +95,9 @@ export default function Dashboard() {
         </section>
 
         <section className="stats-grid">
-          <StatCard title="Network Hashrate" value={stats.networkHashrate} icon={Globe} trend={4.2} />
-          <StatCard title="Local Hashrate" value={stats.localHashrate} icon={Cpu} trend={0.5} />
-          <StatCard title="Total Rewards" value={stats.totalRewards} icon={Database} />
+          <StatCard title="Network Hashrate" value={stats.networkHashrate} icon={Globe} trend={4.2} live />
+          <StatCard title="Local Hashrate" value={stats.localHashrate} icon={Cpu} trend={0.5} live={isMining} />
+          <StatCard title="Total Rewards" value={stats.totalRewards} icon={Database} live={isMining} />
           <StatCard title="Active Workers" value={stats.activeWorkers} icon={Activity} />
         </section>
 
