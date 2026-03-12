@@ -1,30 +1,38 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function HashrateChart() {
-  const [points, setPoints] = useState<number[]>([40, 60, 45, 70, 50, 65, 55, 80, 60, 75, 50]);
-  const [jitter, setJitter] = useState(0);
+  const [timeframe, setTimeframe] = useState<'1H' | '24H' | '7D'>('1H');
+  const [points, setPoints] = useState<number[]>([]);
+
+  // Initial data generation based on timeframe
+  useEffect(() => {
+    const count = timeframe === '1H' ? 11 : timeframe === '24H' ? 24 : 14;
+    const initial = Array.from({ length: count }, () => Math.floor(Math.random() * 40) + 40);
+    setPoints(initial);
+  }, [timeframe]);
 
   // Generate random points for the SVG polyline
   const generatePath = (data: number[]) => {
-    return data.map((y, i) => `${i * 40},${100 - y}`).join(' ');
+    const step = 400 / (data.length - 1);
+    return data.map((y, i) => `${i * step},${100 - y}`).join(' ');
   };
 
-  // Simulate real-time hashrate jitter
+  // Simulate real-time hashrate jitter for the short term
   useEffect(() => {
     const interval = setInterval(() => {
+      if (timeframe !== '1H') return;
       setPoints(prev => {
         const next = [...prev.slice(1)];
         const last = prev[prev.length - 1];
-        const change = (Math.random() - 0.5) * 10;
-        const newValue = Math.max(20, Math.min(90, last + change));
+        const change = (Math.random() - 0.5) * 8;
+        const newValue = Math.max(20, Math.min(95, last + change));
         next.push(newValue);
         return next;
       });
-      setJitter(Math.random() * 2);
     }, 3000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [timeframe]);
 
   const pathData = generatePath(points);
 
@@ -39,43 +47,54 @@ export default function HashrateChart() {
           </div>
         </div>
         <div className="time-filters">
-          <button className="active">1H</button>
-          <button>24H</button>
-          <button>7D</button>
+          <button
+            className={timeframe === '1H' ? 'active' : ''}
+            onClick={() => setTimeframe('1H')}
+          >1H</button>
+          <button
+            className={timeframe === '24H' ? 'active' : ''}
+            onClick={() => setTimeframe('24H')}
+          >24H</button>
+          <button
+            className={timeframe === '7D' ? 'active' : ''}
+            onClick={() => setTimeframe('7D')}
+          >7D</button>
         </div>
       </div>
       <div className="chart-body">
-        <svg viewBox="0 0 400 100" preserveAspectRatio="none" className="chart-svg">
-          <defs>
-            <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="var(--accent-cyan)" stopOpacity="0.3" />
-              <stop offset="100%" stopColor="var(--accent-cyan)" stopOpacity="0" />
-            </linearGradient>
-            <filter id="glow">
-              <feGaussianBlur stdDeviation="2" result="coloredBlur" />
-              <feMerge>
-                <feMergeNode in="coloredBlur" />
-                <feMergeNode in="SourceGraphic" />
-              </feMerge>
-            </filter>
-          </defs>
-          <polyline
-            fill="url(#chartGradient)"
-            stroke="none"
-            points={`${pathData} 400,100 0,100`}
-            className="path-area"
-          />
-          <polyline
-            fill="none"
-            stroke="var(--accent-cyan)"
-            strokeWidth="2.5"
-            points={pathData}
-            strokeLinejoin="round"
-            strokeLinecap="round"
-            className="path-line"
-            filter="url(#glow)"
-          />
-        </svg>
+        {points.length > 0 && (
+          <svg viewBox="0 0 400 100" preserveAspectRatio="none" className="chart-svg">
+            <defs>
+              <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="var(--accent-cyan)" stopOpacity="0.3" />
+                <stop offset="100%" stopColor="var(--accent-cyan)" stopOpacity="0" />
+              </linearGradient>
+              <filter id="glow">
+                <feGaussianBlur stdDeviation="2" result="coloredBlur" />
+                <feMerge>
+                  <feMergeNode in="coloredBlur" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+            </defs>
+            <polyline
+              fill="url(#chartGradient)"
+              stroke="none"
+              points={`${pathData} 400,100 0,100`}
+              className="path-area"
+            />
+            <polyline
+              fill="none"
+              stroke="var(--accent-cyan)"
+              strokeWidth="2.5"
+              points={pathData}
+              strokeLinejoin="round"
+              strokeLinecap="round"
+              className="path-line"
+              filter="url(#glow)"
+            />
+          </svg>
+        )}
       </div>
       <style jsx>{`
         .chart-container {
@@ -150,13 +169,13 @@ export default function HashrateChart() {
           height: 100%;
         }
         .path-line {
-          transition: all 0.8s ease-in-out;
+          transition: all 0.5s ease-in-out;
         }
         .path-area {
-          transition: all 0.8s ease-in-out;
+          transition: all 0.5s ease-in-out;
         }
         .animate-fade-in {
-          animation: fadeIn 0.6s ease-out;
+          animation: fadeIn 0.6s ease-out backwards;
         }
         @keyframes fadeIn {
           from { opacity: 0; transform: translateY(10px); }

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import Sidebar from '../components/Sidebar'
 import StatCard from '../components/StatCard'
 import HashrateChart from '../components/HashrateChart'
+import MiningConsole from '../components/MiningConsole'
 import { Cpu, Activity, Database, Globe, Zap } from 'lucide-react'
 
 export default function Dashboard() {
@@ -102,6 +103,7 @@ export default function Dashboard() {
         </section>
 
         <HashrateChart />
+        <MiningConsole />
       </main>
 
       <style jsx>{`
