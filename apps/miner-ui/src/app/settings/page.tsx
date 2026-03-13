@@ -22,7 +22,9 @@ export default function SettingsPage() {
                 ...prev,
                 wallet: state.wallet || prev.wallet,
                 autoDiff: state.autoDiff !== undefined ? state.autoDiff : prev.autoDiff,
-                intensity: state.intensity || prev.intensity
+                intensity: state.intensity || prev.intensity,
+                stratum: state.stratum || prev.stratum,
+                fallback: state.fallback || prev.fallback
             }));
         }
     }, []);
@@ -35,7 +37,9 @@ export default function SettingsPage() {
             ...state,
             wallet: config.wallet,
             intensity: config.intensity,
-            autoDiff: config.autoDiff
+            autoDiff: config.autoDiff,
+            stratum: config.stratum,
+            fallback: config.fallback
         };
 
         localStorage.setItem('miner_state', JSON.stringify(newState));

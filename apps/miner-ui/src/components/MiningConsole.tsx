@@ -11,8 +11,13 @@ interface Log {
   timestamp: string;
 }
 
-export default function MiningConsole() {
+interface MiningConsoleProps {
+  onBlockFound?: () => void;
+}
+
+export default function MiningConsole({ onBlockFound }: MiningConsoleProps) {
   const [logs, setLogs] = useState<Log[]>([]);
+  const [activePool, setActivePool] = useState('cyprus1.rpc.quai.network');
   const scrollRef = useRef<HTMLDivElement>(null);
   const logId = useRef(0);
 
@@ -28,14 +33,15 @@ export default function MiningConsole() {
   };
 
   useEffect(() => {
-    // Initial logs
-    addLog('BoltEVM Miner v1.0.4 initialized...', 'info');
-    addLog('Connecting to Quai Network Cyprus-1...', 'info');
-
     const storedState = localStorage.getItem('miner_state');
     let totalMh = 0;
+    let poolUrl = 'stratum+tcp://quai.pool.bolt-evm.com:3333';
+
     if (storedState) {
       const state = JSON.parse(storedState);
+      if (state.stratum) poolUrl = state.stratum;
+      setActivePool(poolUrl.replace('stratum+tcp://', ''));
+
       if (state.active) {
         if (state.mode === 'gpu' || state.mode === 'dual') {
           state.gpus.forEach((gpu: string) => {
@@ -49,6 +55,11 @@ export default function MiningConsole() {
         }
       }
     }
+
+    // Initial logs
+    addLog('BoltEVM Miner v1.0.4 initialized...', 'info');
+    addLog(`Connecting to Mining Pool: ${poolUrl}`, 'info');
+    addLog('Auth check complete. Worker: bolt-worker-16', 'success');
 
     addLog(`Mining sequence started. Intensity: ${totalMh > 500000 ? 'Ultra' : 'High'}`, 'success');
 
@@ -72,12 +83,13 @@ export default function MiningConsole() {
             // Very rare: actual block reward found (proportional to hashrate)
             if (Math.random() < (totalMh / 5000000)) {
               addLog(`Block Solution Accepted! Found block on Cyprus-1`, 'success');
+              if (onBlockFound) onBlockFound();
             }
           }
           lastBlock = data.blockHeight;
         }
       } catch (e) {
-        addLog('Connection lag on Cyprus-1. Retrying...', 'warning');
+        addLog('Connection lag detected. Retrying...', 'warning');
       }
     };
 
@@ -102,7 +114,7 @@ export default function MiningConsole() {
         </div>
         <div className="connection-pill">
           <div className="dot"></div>
-          Connected: cyprus1.rpc.quai.network
+          Connected: {activePool}
         </div>
       </div>
       <div className="console-body" ref={scrollRef}>

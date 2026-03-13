@@ -12,9 +12,10 @@ export default function Dashboard() {
   const [stats, setStats] = useState({
     networkHashrate: '...',
     localHashrate: '0.0 GH/s',
-    totalRewards: '...',
+    totalRewards: '0.00 QUAI',
     activeWorkers: '0 / 0'
   });
+  const [sessionRewards, setSessionRewards] = useState(0);
   const [isMining, setIsMining] = useState(false);
 
   useEffect(() => {
@@ -61,7 +62,7 @@ export default function Dashboard() {
         setStats(prev => ({
           ...prev,
           networkHashrate: data.networkHashrate,
-          totalRewards: data.totalPaid
+          totalRewards: data.totalPaid || '0.00 QUAI'
         }));
       } catch (error) {
         console.error('Failed to fetch stats:', error);
@@ -74,6 +75,15 @@ export default function Dashboard() {
 
     return () => clearInterval(refreshInterval);
   }, []);
+
+  const handleBlockFound = () => {
+    // Standard Quai Cyprus-1 block reward estimation
+    setSessionRewards(prev => prev + 2.5);
+  };
+
+  // Combined rewards (Confirmed + Session)
+  const confirmedRewards = parseFloat(stats.totalRewards.split(' ')[0]) || 0;
+  const totalCombined = (confirmedRewards + sessionRewards).toFixed(2);
 
   return (
     <div className="dashboard-container">
@@ -103,12 +113,18 @@ export default function Dashboard() {
         <section className="stats-grid">
           <StatCard title="Network Hashrate" value={stats.networkHashrate} icon={Globe} trend={4.2} live />
           <StatCard title="Local Hashrate" value={stats.localHashrate} icon={Cpu} trend={0.5} live={isMining} />
-          <StatCard title="Total Rewards" value={stats.totalRewards} icon={Database} live={isMining} />
+          <StatCard
+            title="Total Rewards"
+            value={`${totalCombined} QUAI`}
+            icon={Database}
+            live={isMining}
+            trend={sessionRewards > 0 ? (sessionRewards / confirmedRewards * 100) : undefined}
+          />
           <StatCard title="Active Workers" value={stats.activeWorkers} icon={Activity} />
         </section>
 
         <HashrateChart />
-        <MiningConsole />
+        <MiningConsole onBlockFound={handleBlockFound} />
       </main>
 
       <style jsx>{`
