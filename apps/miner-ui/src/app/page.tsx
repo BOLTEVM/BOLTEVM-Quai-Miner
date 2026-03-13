@@ -6,6 +6,7 @@ import StatCard from '../components/StatCard'
 import HashrateChart from '../components/HashrateChart'
 import MiningConsole from '../components/MiningConsole'
 import { Cpu, Activity, Database, Globe, Zap } from 'lucide-react'
+import { estimateHashrate, convertToStandardUnit } from '../utils/hashrate'
 
 export default function Dashboard() {
   const [stats, setStats] = useState({
@@ -25,17 +26,32 @@ export default function Dashboard() {
           const state = JSON.parse(storedState);
           walletAddress = state.wallet;
 
-          let localHashrate = '0.0 GH/s';
           if (state.active) {
             setIsMining(true);
-            if (state.mode === 'gpu') localHashrate = '450.5 GH/s';
-            else if (state.mode === 'cpu') localHashrate = '12.2 MH/s';
-            else if (state.mode === 'dual') localHashrate = '462.7 total';
+            let totalMh = 0;
+            let workerCount = 0;
+
+            if (state.mode === 'gpu' || state.mode === 'dual') {
+              state.gpus.forEach((gpu: string) => {
+                const est = estimateHashrate(gpu, 'gpu');
+                totalMh += convertToStandardUnit(est.value, est.unit);
+                workerCount++;
+              });
+            }
+
+            if (state.mode === 'cpu' || state.mode === 'dual') {
+              const cpuName = state.cpu?.name || 'Generic CPU';
+              const est = estimateHashrate(cpuName, 'cpu');
+              totalMh += convertToStandardUnit(est.value, est.unit);
+              workerCount++;
+            }
+
+            const totalGh = totalMh / 1000;
 
             setStats(prev => ({
               ...prev,
-              localHashrate: localHashrate,
-              activeWorkers: state.mode === 'dual' ? '2 / 2' : '1 / 1'
+              localHashrate: totalGh > 1 ? `${totalGh.toFixed(1)} GH/s` : `${totalMh.toFixed(1)} MH/s`,
+              activeWorkers: `${workerCount} / ${workerCount}`
             }));
           }
         }

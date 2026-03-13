@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Terminal } from 'lucide-react';
+import { Terminal, Activity, ChevronRight } from 'lucide-react';
+import { estimateHashrate, convertToStandardUnit } from '../utils/hashrate';
 
 interface Log {
   id: number;
@@ -30,9 +31,26 @@ export default function MiningConsole() {
     // Initial logs
     addLog('BoltEVM Miner v1.0.4 initialized...', 'info');
     addLog('Connecting to Quai Network Cyprus-1...', 'info');
-    addLog('GPU Workers detected: 1 [RTX 2070]', 'success');
-    addLog('CPU Threads initialized: 8', 'success');
-    addLog('Mining sequence started.', 'success');
+
+    const storedState = localStorage.getItem('miner_state');
+    let totalMh = 0;
+    if (storedState) {
+      const state = JSON.parse(storedState);
+      if (state.active) {
+        if (state.mode === 'gpu' || state.mode === 'dual') {
+          state.gpus.forEach((gpu: string) => {
+            const est = estimateHashrate(gpu, 'gpu');
+            totalMh += convertToStandardUnit(est.value, est.unit);
+          });
+        }
+        if (state.mode === 'cpu' || state.mode === 'dual') {
+          const est = estimateHashrate(state.cpu?.name || '', 'cpu');
+          totalMh += convertToStandardUnit(est.value, est.unit);
+        }
+      }
+    }
+
+    addLog(`Mining sequence started. Intensity: ${totalMh > 500000 ? 'Ultra' : 'High'}`, 'success');
 
     let lastBlock = 0;
 
@@ -42,10 +60,19 @@ export default function MiningConsole() {
         const data = await response.json();
         if (data.blockHeight && data.blockHeight !== lastBlock) {
           addLog(`New Block Detected: # ${data.blockHeight}`, 'success');
-          // Occasionally simulate solution found on block update to keep it feeling active but linked to real time
-          if (Math.random() > 0.4) {
+
+          // Probability of submitting shares increases with hashrate
+          // Base 40%, adds up to 50% more based on hashrate relative to a "1 TH/s" baseline
+          const shareProb = 0.4 + Math.min(0.5, totalMh / 2000000);
+
+          if (Math.random() < shareProb) {
             const hash = Math.random().toString(16).substring(2, 10);
             addLog(`POW Share submitted: 0x${hash}... (Pending Validation)`, 'info');
+
+            // Very rare: actual block reward found (proportional to hashrate)
+            if (Math.random() < (totalMh / 5000000)) {
+              addLog(`Block Solution Accepted! Found block on Cyprus-1`, 'success');
+            }
           }
           lastBlock = data.blockHeight;
         }
@@ -55,7 +82,7 @@ export default function MiningConsole() {
     };
 
     fetchBlock();
-    const interval = setInterval(fetchBlock, 15000); // Poll every 15s
+    const interval = setInterval(fetchBlock, 15000);
 
     return () => clearInterval(interval);
   }, []);

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { estimateHashrate, formatHashrate } from '../utils/hashrate';
 
 export default function MinerTable() {
   const [workers, setWorkers] = useState<any[]>([]);
@@ -14,10 +15,11 @@ export default function MinerTable() {
       if (state.active) {
         if (state.mode === 'gpu' || state.mode === 'dual') {
           state.gpus.forEach((gpu: string, i: number) => {
+            const estimation = estimateHashrate(gpu, 'gpu');
             items.push({
               id: `BOLT-GPU-${i + 1}`,
               type: gpu,
-              hashrate: '225.2 GH/s',
+              hashrate: formatHashrate(estimation.value, estimation.unit),
               temp: '62°C',
               status: 'Online'
             });
@@ -25,10 +27,12 @@ export default function MinerTable() {
         }
 
         if (state.mode === 'cpu' || state.mode === 'dual') {
+          const cpuName = state.cpu?.name || 'Generic CPU';
+          const estimation = estimateHashrate(cpuName, 'cpu');
           items.push({
             id: 'BOLT-CPU-01',
-            type: state.cpu?.name || 'Generic CPU',
-            hashrate: '12.2 MH/s',
+            type: cpuName,
+            hashrate: formatHashrate(estimation.value, estimation.unit),
             temp: '51°C',
             status: 'Online'
           });
