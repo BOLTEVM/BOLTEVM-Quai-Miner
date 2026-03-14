@@ -81,6 +81,14 @@ export default function Dashboard() {
     setSessionRewards(prev => prev + 2.5);
   };
 
+  const [measuredHashrate, setMeasuredHashrate] = useState<string | null>(null);
+
+  // Handle hashrate updates from worker
+  const handleHashrateUpdate = (mh: number) => {
+    const gh = mh / 1000;
+    setMeasuredHashrate(gh > 1 ? `${gh.toFixed(1)} GH/s` : `${mh.toFixed(1)} MH/s`);
+  };
+
   // Combined rewards (Confirmed + Session)
   const confirmedRewards = parseFloat(stats.totalRewards.split(' ')[0]) || 0;
   const totalCombined = (confirmedRewards + sessionRewards).toFixed(2);
@@ -112,7 +120,14 @@ export default function Dashboard() {
 
         <section className="stats-grid">
           <StatCard title="Network Hashrate" value={stats.networkHashrate} icon={Globe} trend={4.2} live />
-          <StatCard title="Local Hashrate" value={stats.localHashrate} icon={Cpu} trend={0.5} live={isMining} />
+          <StatCard
+            title="Local Hashrate"
+            value={isMining && measuredHashrate ? measuredHashrate : stats.localHashrate}
+            subValue={isMining && measuredHashrate ? 'MEASURED (LIVE)' : 'ESTIMATED'}
+            icon={Cpu}
+            trend={0.5}
+            live={isMining}
+          />
           <StatCard
             title="Total Rewards"
             value={stats.totalRewards}
@@ -132,7 +147,7 @@ export default function Dashboard() {
         </section>
 
         <HashrateChart />
-        <MiningConsole onBlockFound={handleBlockFound} />
+        <MiningConsole onBlockFound={handleBlockFound} onHashrateUpdate={handleHashrateUpdate} />
       </main>
 
       <style jsx>{`
