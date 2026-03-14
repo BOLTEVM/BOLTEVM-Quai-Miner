@@ -5,6 +5,7 @@ import Sidebar from '../components/Sidebar'
 import StatCard from '../components/StatCard'
 import HashrateChart from '../components/HashrateChart'
 import MiningConsole from '../components/MiningConsole'
+import MinerInstructions from '../components/MinerInstructions'
 import { Cpu, Activity, Database, Globe, Zap } from 'lucide-react'
 import { estimateHashrate, convertToStandardUnit } from '../utils/hashrate'
 
@@ -85,8 +86,9 @@ export default function Dashboard() {
 
   // Handle hashrate updates from worker
   const handleHashrateUpdate = (mh: number) => {
-    const gh = mh / 1000;
-    setMeasuredHashrate(gh > 1 ? `${gh.toFixed(1)} GH/s` : `${mh.toFixed(1)} MH/s`);
+    // Correct mapping: Browser-worker usually does ~10-100 processed megahashes
+    // We scale this to GH/s for the UI if it's very fast, else MH/s
+    setMeasuredHashrate(mh > 1000 ? `${(mh / 1000).toFixed(1)} GH/s` : `${mh.toFixed(1)} MH/s`);
   };
 
   // Combined rewards (Confirmed + Session)
@@ -147,6 +149,7 @@ export default function Dashboard() {
         </section>
 
         <HashrateChart />
+        <MinerInstructions />
         <MiningConsole onBlockFound={handleBlockFound} onHashrateUpdate={handleHashrateUpdate} />
       </main>
 
