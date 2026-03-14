@@ -8,9 +8,10 @@ export default function SettingsPage() {
     const [config, setConfig] = useState({
         stratum: 'stratum+tcp://quai.pool.bolt-evm.com:3333',
         fallback: 'stratum+tcp://quai.backup-pool.com:4444',
-        wallet: '0x71C7656EC7ab88b098defB751B7401B5f6d8976F',
+        wallet: '0x004d3530737b741025A7875eAA7A7D1E5a54d906',
         intensity: 'Medium (Standard)',
-        autoDiff: true
+        autoDiff: true,
+        walletLocked: true
     });
     const [saved, setSaved] = useState(false);
 
@@ -24,7 +25,8 @@ export default function SettingsPage() {
                 autoDiff: state.autoDiff !== undefined ? state.autoDiff : prev.autoDiff,
                 intensity: state.intensity || prev.intensity,
                 stratum: state.stratum || prev.stratum,
-                fallback: state.fallback || prev.fallback
+                fallback: state.fallback || prev.fallback,
+                walletLocked: state.walletLocked !== undefined ? state.walletLocked : prev.walletLocked
             }));
         }
     }, []);
@@ -39,7 +41,8 @@ export default function SettingsPage() {
             intensity: config.intensity,
             autoDiff: config.autoDiff,
             stratum: config.stratum,
-            fallback: config.fallback
+            fallback: config.fallback,
+            walletLocked: config.walletLocked
         };
 
         localStorage.setItem('miner_state', JSON.stringify(newState));
@@ -85,11 +88,25 @@ export default function SettingsPage() {
                             <Shield size={20} color="var(--accent-cyan)" />
                             <h3>Wallet & Security</h3>
                         </div>
+                        <div className="form-group checkbox">
+                            <input
+                                type="checkbox"
+                                checked={config.walletLocked}
+                                onChange={(e) => setConfig({ ...config, walletLocked: e.target.checked })}
+                            />
+                            <label>Lock wallet address for security</label>
+                        </div>
                         <div className="form-group">
                             <label>Quai Wallet Address</label>
                             <input
                                 type="text"
                                 value={config.wallet}
+                                readOnly={config.walletLocked}
+                                style={{
+                                    opacity: config.walletLocked ? 0.7 : 1,
+                                    cursor: config.walletLocked ? 'not-allowed' : 'text',
+                                    borderStyle: config.walletLocked ? 'dashed' : 'solid'
+                                }}
                                 onChange={(e) => setConfig({ ...config, wallet: e.target.value })}
                             />
                         </div>

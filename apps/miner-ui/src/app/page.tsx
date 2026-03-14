@@ -115,10 +115,18 @@ export default function Dashboard() {
           <StatCard title="Local Hashrate" value={stats.localHashrate} icon={Cpu} trend={0.5} live={isMining} />
           <StatCard
             title="Total Rewards"
-            value={`${totalCombined} QUAI`}
+            value={stats.totalRewards}
+            subValue={`+ ${sessionRewards.toFixed(2)} Session Est.`}
             icon={Database}
             live={isMining}
             trend={sessionRewards > 0 ? (sessionRewards / confirmedRewards * 100) : undefined}
+            onClick={() => {
+              const stored = localStorage.getItem('miner_state');
+              if (stored) {
+                const state = JSON.parse(stored);
+                window.open(`https://explorer.quai.network/address/${state.wallet}`, '_blank');
+              }
+            }}
           />
           <StatCard title="Active Workers" value={stats.activeWorkers} icon={Activity} />
         </section>

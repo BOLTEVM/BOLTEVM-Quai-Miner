@@ -1,6 +1,6 @@
-export default function StatCard({ title, value, icon: Icon, trend, live }: any) {
+export default function StatCard({ title, value, subValue, icon: Icon, trend, live, onClick }: any) {
   return (
-    <div className="glass-card stat-card animate-slide-up">
+    <div className={`glass-card stat-card animate-slide-up ${onClick ? 'clickable' : ''}`} onClick={onClick}>
       <div className="card-header">
         <div className={`icon-wrapper ${live ? 'live-icon' : ''}`}>
           <Icon size={24} color="var(--accent-cyan)" />
@@ -15,6 +15,7 @@ export default function StatCard({ title, value, icon: Icon, trend, live }: any)
       <div className="card-body">
         <span className="stat-title">{title}</span>
         <h3 className="stat-value">{value}</h3>
+        {subValue && <div className="stat-subvalue">{subValue}</div>}
       </div>
       <style jsx>{`
         .stat-card {
@@ -87,6 +88,16 @@ export default function StatCard({ title, value, icon: Icon, trend, live }: any)
           background: linear-gradient(180deg, #fff 0%, rgba(255, 255, 255, 0.7) 100%);
           -webkit-background-clip: text;
           -webkit-text-fill-color: transparent;
+        }
+        .stat-subvalue {
+          font-size: 13px;
+          color: var(--accent-cyan);
+          margin-top: 4px;
+          font-weight: 600;
+          opacity: 0.9;
+        }
+        .clickable {
+          cursor: pointer;
         }
         .animate-slide-up {
           animation: slideUp 0.6s ease-out backwards;
