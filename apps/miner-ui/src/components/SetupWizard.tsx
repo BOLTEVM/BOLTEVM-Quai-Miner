@@ -24,6 +24,8 @@ export default function SetupWizard() {
     const [buildLogs, setBuildLogs] = useState<string[]>([]);
     const [isBuilding, setIsBuilding] = useState(false);
     const [buildSuccess, setBuildSuccess] = useState(false);
+    const [depsOk, setDepsOk] = useState<boolean | null>(null);
+    const [isRepairing, setIsRepairing] = useState(false);
 
     useEffect(() => {
         if (currentStep === 4) {
@@ -59,6 +61,45 @@ export default function SetupWizard() {
             setGpus(['Generic GPU (Manual Override)']);
         } finally {
             setDetecting(false);
+        }
+    };
+
+    const checkDependencies = async () => {
+        try {
+            const response = await fetch('/api/hardware');
+            const data = await response.json();
+            // We can infer cmake/perl missing from the build failure, 
+            // but for a pre-check we can add a check-env API or just try to run them
+            setDepsOk(true); // Placeholder for initial state
+        } catch (e) {
+            setDepsOk(false);
+        }
+    };
+
+    const repairEnvironment = async () => {
+        setIsRepairing(true);
+        setBuildLogs(['Starting environment repair...']);
+        try {
+            const response = await fetch('/api/miner/setup-env', { method: 'POST' });
+            const reader = response.body?.getReader();
+            const decoder = new TextDecoder();
+
+            if (!reader) throw new Error('Failed to start repair stream');
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                const text = decoder.decode(value);
+                const lines = text.split('\n').filter(l => l.trim());
+                setBuildLogs(prev => [...prev, ...lines]);
+
+                if (text.includes('[SUCCESS]')) setDepsOk(true);
+            }
+        } catch (error: any) {
+            setBuildLogs(prev => [...prev, `[FATAL] ${error.message}`]);
+        } finally {
+            setIsRepairing(false);
         }
     };
 
@@ -204,15 +245,17 @@ export default function SetupWizard() {
                         <div className="build-terminal glass-card">
                             <div className="terminal-header">
                                 <Terminal size={14} />
-                                <span>Build Output</span>
-                                {isBuilding && <Loader2 size={14} className="animate-spin" />}
+                                <span>{isRepairing ? 'Repairing Environment' : 'Build Output'}</span>
+                                {(isBuilding || isRepairing) && <Loader2 size={14} className="animate-spin" />}
                             </div>
                             <div className="terminal-body" id="build-logs">
                                 {buildLogs.length === 0 ? (
-                                    <div className="empty-terminal">Ready to compile official miner source.</div>
+                                    <div className="empty-terminal">
+                                        {depsOk === false ? 'Environment issue detected (CMake/Perl missing).' : 'Ready to compile official miner source.'}
+                                    </div>
                                 ) : (
                                     buildLogs.map((log, i) => (
-                                        <div key={i} className={`log-line ${log.includes('[ERR]') || log.includes('[FAIL]') ? 'err' : log.includes('[SUCCESS]') ? 'success' : ''}`}>
+                                        <div key={i} className={`log-line ${log.includes('[ERR]') || log.includes('[FAIL]') || log.includes('[FATAL]') ? 'err' : log.includes('[SUCCESS]') ? 'success' : ''}`}>
                                             {log}
                                         </div>
                                     ))
@@ -221,9 +264,14 @@ export default function SetupWizard() {
                         </div>
 
                         <div className="actions">
-                            <button className="btn-ghost" onClick={prevStep} disabled={isBuilding}>Back</button>
+                            <button className="btn-ghost" onClick={prevStep} disabled={isBuilding || isRepairing}>Back</button>
+                            {buildLogs.some(l => l.includes('CMake configuration failed')) && !isRepairing && (
+                                <button className="btn-primary warning" onClick={repairEnvironment}>
+                                    Auto-Repair Environment (Install CMake/Perl)
+                                </button>
+                            )}
                             {!buildSuccess ? (
-                                <button className="btn-primary" onClick={startBuild} disabled={isBuilding}>
+                                <button className="btn-primary" onClick={startBuild} disabled={isBuilding || isRepairing}>
                                     {isBuilding ? 'Compiling Sources...' : 'Start Optimized Build'}
                                 </button>
                             ) : (
@@ -360,6 +408,8 @@ export default function SetupWizard() {
         
         .actions { display: flex; gap: 16px; margin-top: auto; }
         .btn-ghost { background: transparent; border: 1px solid var(--glass-border); color: white; padding: 12px 24px; border-radius: 8px; cursor: pointer; }
+        .btn-primary.warning { background: #ff9800; border-color: #ff9800; color: #000; font-weight: 700; margin-right: 12px; }
+        .btn-primary.warning:hover { background: #f57c00; box-shadow: 0 0 15px rgba(255, 152, 0, 0.4); }
         .center { align-items: center; text-align: center; justify-content: center; }
         .success-icon { width: 80px; height: 80px; background: var(--gradient-primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 24px; box-shadow: 0 0 30px rgba(0, 242, 255, 0.4); }
         .summary-box { background: var(--glass-bg); padding: 20px; border-radius: 12px; width: 100%; max-width: 300px; margin-bottom: 32px; }
