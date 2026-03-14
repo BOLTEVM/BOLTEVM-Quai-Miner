@@ -1,0 +1,3 @@
+[submodule "apps/quai-gpu-miner"]
+	path = apps/quai-gpu-miner
+	url = https://github.com/dominant-strategies/quai-gpu-miner.git

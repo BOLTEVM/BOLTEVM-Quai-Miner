@@ -1,14 +1,15 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Cpu, CheckCircle, Rocket, ShieldCheck, Zap, Database } from 'lucide-react';
+import { Cpu, CheckCircle, Rocket, ShieldCheck, Zap, Database, Terminal, Loader2 } from 'lucide-react';
 
 const steps = [
     { id: 1, title: 'Hardware Detection', icon: Cpu },
     { id: 2, title: 'Mining Profile', icon: Zap },
-    { id: 3, title: 'Network Sync', icon: ShieldCheck },
-    { id: 4, title: 'Rewards', icon: Database },
-    { id: 5, title: 'Launch', icon: Rocket },
+    { id: 3, title: 'Optimized Build', icon: Terminal },
+    { id: 4, title: 'Network Sync', icon: ShieldCheck },
+    { id: 5, title: 'Rewards', icon: Database },
+    { id: 6, title: 'Launch', icon: Rocket },
 ];
 
 export default function SetupWizard() {
@@ -20,9 +21,12 @@ export default function SetupWizard() {
     const [profile, setProfile] = useState('balanced');
     const [wallet, setWallet] = useState('');
     const [syncProgress, setSyncProgress] = useState(0);
+    const [buildLogs, setBuildLogs] = useState<string[]>([]);
+    const [isBuilding, setIsBuilding] = useState(false);
+    const [buildSuccess, setBuildSuccess] = useState(false);
 
     useEffect(() => {
-        if (currentStep === 3) {
+        if (currentStep === 4) {
             const timer = setInterval(() => {
                 setSyncProgress(prev => {
                     if (prev >= 100) {
@@ -55,6 +59,33 @@ export default function SetupWizard() {
             setGpus(['Generic GPU (Manual Override)']);
         } finally {
             setDetecting(false);
+        }
+    };
+
+    const startBuild = async () => {
+        setIsBuilding(true);
+        setBuildLogs(['Initializing build sequence...']);
+        try {
+            const response = await fetch('/api/miner/build', { method: 'POST' });
+            const reader = response.body?.getReader();
+            const decoder = new TextDecoder();
+
+            if (!reader) throw new Error('Failed to start build stream');
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                const text = decoder.decode(value);
+                const lines = text.split('\n').filter(l => l.trim());
+                setBuildLogs(prev => [...prev, ...lines].slice(-100)); // Keep last 100 lines
+
+                if (text.includes('[SUCCESS]')) setBuildSuccess(true);
+            }
+        } catch (error: any) {
+            setBuildLogs(prev => [...prev, `[FATAL] ${error.message}`]);
+        } finally {
+            setIsBuilding(false);
         }
     };
 
@@ -167,6 +198,43 @@ export default function SetupWizard() {
 
                 {currentStep === 3 && (
                     <div className="step-pane animate-in">
+                        <h2>Build Optimized Binary</h2>
+                        <p>Compiling official quai-gpu-miner from source for your specific hardware.</p>
+
+                        <div className="build-terminal glass-card">
+                            <div className="terminal-header">
+                                <Terminal size={14} />
+                                <span>Build Output</span>
+                                {isBuilding && <Loader2 size={14} className="animate-spin" />}
+                            </div>
+                            <div className="terminal-body" id="build-logs">
+                                {buildLogs.length === 0 ? (
+                                    <div className="empty-terminal">Ready to compile official miner source.</div>
+                                ) : (
+                                    buildLogs.map((log, i) => (
+                                        <div key={i} className={`log-line ${log.includes('[ERR]') || log.includes('[FAIL]') ? 'err' : log.includes('[SUCCESS]') ? 'success' : ''}`}>
+                                            {log}
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="actions">
+                            <button className="btn-ghost" onClick={prevStep} disabled={isBuilding}>Back</button>
+                            {!buildSuccess ? (
+                                <button className="btn-primary" onClick={startBuild} disabled={isBuilding}>
+                                    {isBuilding ? 'Compiling Sources...' : 'Start Optimized Build'}
+                                </button>
+                            ) : (
+                                <button className="btn-primary" onClick={nextStep}>Continue to Sync</button>
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                {currentStep === 4 && (
+                    <div className="step-pane animate-in">
                         <h2>Network Synchronization</h2>
                         <p>Connecting to BoltEVM Quai Stratum nodes...</p>
                         <div className="sync-progress">
@@ -184,7 +252,7 @@ export default function SetupWizard() {
                     </div>
                 )}
 
-                {currentStep === 4 && (
+                {currentStep === 5 && (
                     <div className="step-pane animate-in">
                         <h2>Reward Allocation</h2>
                         <p>Enter your Quai Network address to receive mining rewards.</p>
@@ -210,7 +278,7 @@ export default function SetupWizard() {
                     </div>
                 )}
 
-                {currentStep === 5 && (
+                {(currentStep === 6) && (
                     <div className="step-pane animate-in center">
                         <div className="success-icon"><Rocket size={48} /></div>
                         <h2>Ready to Launch!</h2>
@@ -234,7 +302,8 @@ export default function SetupWizard() {
                                 wallet: wallet,
                                 profile: profile,
                                 gpus: gpus,
-                                cpu: cpu
+                                cpu: cpu,
+                                optimized: buildSuccess
                             }));
                             window.location.href = '/';
                         }}>Launch BoltEVM Miner</button>
@@ -277,6 +346,14 @@ export default function SetupWizard() {
         .profile-card h3 { margin: 8px 0; font-size: 15px; }
         .profile-card p { font-size: 11px; margin-bottom: 0; line-height: 1.4; color: var(--text-secondary); }
         
+        .build-terminal { background: #0c0d12; border: 1px solid var(--glass-border); border-radius: 8px; margin-bottom: 32px; overflow: hidden; }
+        .terminal-header { background: rgba(255, 255, 255, 0.05); padding: 8px 16px; display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--text-secondary); border-bottom: 1px solid var(--glass-border); }
+        .terminal-body { padding: 16px; height: 200px; overflow-y: auto; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #aaa; text-align: left; scroll-behavior: smooth; }
+        .log-line { margin-bottom: 4px; border-left: 2px solid transparent; padding-left: 8px; }
+        .log-line.err { color: #ff5555; border-left-color: #ff5555; }
+        .log-line.success { color: #50fa7b; font-weight: bold; border-left-color: #50fa7b; }
+        .empty-terminal { height: 100%; display: flex; align-items: center; justify-content: center; opacity: 0.5; font-style: italic; }
+
         .sync-progress { margin-bottom: 32px; }
         .progress-bar { height: 8px; background: var(--glass-border); border-radius: 4px; margin-bottom: 8px; overflow: hidden; }
         .progress-fill { height: 100%; background: var(--gradient-primary); transition: width 0.5s; }
