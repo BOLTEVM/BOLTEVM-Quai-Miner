@@ -12,8 +12,9 @@ export async function POST() {
 
             const runWinget = (cmd: string, args: string[]): Promise<boolean> => {
                 return new Promise((resolve) => {
-                    send(`> winget ${args.join(' ')}`);
-                    const child = spawn('winget', args, { shell: true });
+                    const fullArgs = [cmd, ...args];
+                    send(`> winget ${fullArgs.join(' ')}`);
+                    const child = spawn('winget', fullArgs, { shell: true });
 
                     child.stdout.on('data', (data) => {
                         send(data.toString());
