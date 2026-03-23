@@ -317,7 +317,7 @@ export default function SetupWizard() {
                             {/* Show repair button if dep check found missing tools OR build failed with CMake error */}
                             {(depsOk === false || buildLogs.some(l => l.includes('CMake configuration failed'))) && !isRepairing && (
                                 <button className="btn-primary warning" onClick={repairEnvironment}>
-                                    Auto-Repair Environment (Install CMake/Perl)
+                                    Auto-Repair Environment (Install Toolchain)
                                 </button>
                             )}
                             {!buildSuccess ? (

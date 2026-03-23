@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { exec } from 'child_process';
+import { exec, execSync } from 'child_process';
 import { promisify } from 'util';
 import fs from 'fs';
 
@@ -21,7 +21,6 @@ async function probe(
 ): Promise<DepResult> {
     try {
         const { stdout } = await execAsync(cmd, { timeout: 5000 });
-        // Grab first non-empty line as the version string
         const version = stdout.split(/\r?\n/).find(l => l.trim()) ?? null;
         return { name, required, ok: true, version: version?.trim() ?? null, hint };
     } catch {
@@ -29,80 +28,67 @@ async function probe(
     }
 }
 
-function checkVS(): DepResult {
-    const vswhere = 'C:\\Program Files (x86)\\Microsoft Visual Studio\\Installer\\vswhere.exe';
-    const paths2022 = [
-        'C:\\Program Files\\Microsoft Visual Studio\\2022\\Community',
-        'C:\\Program Files\\Microsoft Visual Studio\\2022\\Professional',
-        'C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise',
-        'C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools',
-    ];
-    const paths2019 = [
-        'C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community',
-        'C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Professional',
-        'C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Enterprise',
-        'C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\BuildTools',
-    ];
-    const paths2017 = [
-        'C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community',
-        'C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Professional',
-        'C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Enterprise',
-        'C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\BuildTools',
-    ];
+async function checkCompiler(): Promise<DepResult> {
+    const platform = process.platform;
 
-    // Prefer vswhere for accurate detection
-    if (fs.existsSync(vswhere)) {
-        try {
-            const { execSync } = require('child_process');
-            const out = execSync(`"${vswhere}" -latest -property displayName`, { encoding: 'utf8' }).trim();
-            if (out) return {
-                name: 'Visual Studio (MSVC)',
-                required: true,
-                ok: true,
-                version: out,
-                hint: 'Required for CMake MSVC generator. Install from visualstudio.microsoft.com',
-            };
-        } catch {}
+    if (platform === 'win32') {
+        const vswhere = 'C:\\Program Files (x86)\\Microsoft Visual Studio\\Installer\\vswhere.exe';
+        if (fs.existsSync(vswhere)) {
+            try {
+                const out = execSync(`"${vswhere}" -latest -property displayName`, { encoding: 'utf8' }).trim();
+                if (out) return {
+                    name: 'Visual Studio (MSVC)',
+                    required: true,
+                    ok: true,
+                    version: out,
+                    hint: 'Required for CMake MSVC generator.',
+                };
+            } catch {}
+        }
+        return {
+            name: 'Visual Studio (MSVC)',
+            required: true,
+            ok: false,
+            version: null,
+            hint: 'Install VS 2017-2022 with "Desktop development with C++".',
+        };
+    } else {
+        // Assume Linux/Unix
+        return await probe(
+            'GCC/G++',
+            'g++ --version',
+            true,
+            'Required for compilation. Install build-essential (Debian/Ubuntu) or base-devel (Arch).'
+        );
     }
-
-    // Fall back to path checks
-    const found =
-        [...paths2022, ...paths2019, ...paths2017].find(p => fs.existsSync(p));
-
-    return {
-        name: 'Visual Studio (MSVC)',
-        required: true,
-        ok: !!found,
-        version: found ? found.split('\\').slice(-2).join(' ') : null,
-        hint: 'Install Visual Studio 2017–2022 with "Desktop development with C++" workload.',
-    };
 }
 
 export async function GET() {
-    const [cmake, perl, git] = await Promise.all([
-        probe(
-            'CMake',
-            'cmake --version',
-            true,
-            'Install from cmake.org or run: winget install Kitware.CMake'
-        ),
-        probe(
+    const platform = process.platform;
+    
+    // Core Dependencies
+    const [cmake, git, compiler] = await Promise.all([
+        probe('CMake', 'cmake --version', true, 'Install via your package manager (apt install cmake).'),
+        probe('Git', 'git --version', true, 'Install via your package manager (apt install git).'),
+        checkCompiler(),
+    ]);
+
+    const deps: DepResult[] = [cmake, git, compiler];
+
+    if (platform === 'win32') {
+        const perl = await probe(
             'Perl',
             'perl -e "print $]"',
             true,
-            'Required for OpenSSL build. Install Strawberry Perl: winget install StrawberryPerl.StrawberryPerl'
-        ),
-        probe(
-            'Git',
-            'git --version',
-            true,
-            'Install from git-scm.com or: winget install Git.Git'
-        ),
-    ]);
+            'Required for OpenSSL. Install Strawberry Perl.'
+        );
+        deps.push(perl);
+    } else {
+        const make = await probe('Make', 'make --version', true, 'Install build-essential.');
+        const ssl = await probe('OpenSSL Headers', 'pkg-config --exists openssl && echo "Found"', true, 'Install libssl-dev or openssl-devel.');
+        deps.push(make, ssl);
+    }
 
-    const vs = checkVS();
-
-    const deps: DepResult[] = [cmake, perl, git, vs];
     const allOk = deps.filter(d => d.required).every(d => d.ok);
 
     return NextResponse.json({ ok: allOk, deps });
