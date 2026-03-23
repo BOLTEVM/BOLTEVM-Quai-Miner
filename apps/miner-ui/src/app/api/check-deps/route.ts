@@ -78,14 +78,16 @@ export async function GET() {
     if (platform === 'win32') {
         const perl = await probe(
             'Perl',
-            'perl -e "print $]"',
+            // L-12 FIX: single-quotes prevent $] from being shell-expanded before perl sees it
+            "perl -e 'print $]'",
             true,
             'Required for OpenSSL. Install Strawberry Perl.'
         );
         deps.push(perl);
     } else {
         const make = await probe('Make', 'make --version', true, 'Install build-essential.');
-        const ssl = await probe('OpenSSL Headers', 'pkg-config --exists openssl && echo "Found"', true, 'Install libssl-dev or openssl-devel.');
+        // L-10 FIX: --modversion returns the actual library version string instead of silent exit
+        const ssl = await probe('OpenSSL Headers', 'pkg-config --modversion openssl', true, 'Install libssl-dev or openssl-devel.');
         deps.push(make, ssl);
     }
 

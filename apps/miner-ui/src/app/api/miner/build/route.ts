@@ -42,9 +42,11 @@ export async function POST(request: Request) {
                 return 'Visual Studio 15 2017';
             };
 
+            // L-5 FIX: Hoist vcvars resolution outside runCommand to avoid per-call filesystem scans
+            const vcvars = findVcvars();
+
             const runCommand = (cmd: string, args: string[], cwd: string): Promise<boolean> => {
                 return new Promise((resolve) => {
-                    const vcvars = findVcvars();
                     let finalCmd = cmd;
                     let finalArgs = args;
 
@@ -83,9 +85,11 @@ export async function POST(request: Request) {
 
                 // 3. CMake Configure
                 let cmakeArgs = ['..', '-DCMAKE_BUILD_TYPE=Release'];
+                // L-6 FIX: Do NOT wrap gen in extra quotes — spawn handles escaping.
+                // The nested "\'generator name'\" was causing CMake to report "No such generator"
                 if (platform === 'win32') {
                     const gen = detectVsGenerator();
-                    cmakeArgs.push('-G', `"${gen}"`, '-A', 'x64');
+                    cmakeArgs.push('-G', gen, '-A', 'x64');
                 }
 
                 if (!await runCommand('cmake', cmakeArgs, buildDir)) {

@@ -14,9 +14,20 @@ export async function POST() {
             const runPkgManager = (cmd: string, args: string[]): Promise<boolean> => {
                 return new Promise((resolve) => {
                     const fullArgs = [cmd, ...args];
-                    const exe = platform === 'win32' ? 'winget' : 'sudo';
-                    const finalArgs = platform === 'win32' ? fullArgs : ['apt-get', ...fullArgs];
-                    
+                    let exe: string;
+                    let finalArgs: string[];
+
+                    if (platform === 'win32') {
+                        exe = 'winget';
+                        finalArgs = fullArgs;
+                    } else {
+                        // L-2 FIX: -n tells sudo to never prompt for a password.
+                        // If sudo requires a password, it will exit non-zero immediately
+                        // instead of hanging the server waiting for TTY input.
+                        exe = 'sudo';
+                        finalArgs = ['-n', 'apt-get', ...fullArgs];
+                    }
+
                     send(`> ${exe} ${finalArgs.join(' ')}`);
                     const child = spawn(exe, finalArgs, { shell: true });
 
@@ -35,17 +46,21 @@ export async function POST() {
                     await runPkgManager('install', ['--id', 'StrawberryPerl.StrawberryPerl', '--silent', '--accept-source-agreements', '--accept-package-agreements']);
                 } else if (platform === 'linux') {
                     send('\nInstalling Linux Dependencies via apt-get...');
-                    send('NOTE: This may require sudo password if not configured for passwordless sudo.');
-                    
+                    send('NOTE: Requires passwordless sudo. If this fails, run manually:');
+                    send('  echo "$USER ALL=(ALL) NOPASSWD: /usr/bin/apt-get" | sudo tee /etc/sudoers.d/bquai-miner');
+
                     // Update index first
-                    await runPkgManager('update', ['-y']);
-                    
-                    // Install build-essential, cmake, libssl-dev, git
-                    const success = await runPkgManager('install', ['-y', 'cmake', 'build-essential', 'libssl-dev', 'git']);
-                    
+                    const updateOk = await runPkgManager('update', ['-y']);
+                    if (!updateOk) {
+                        send('[WARN] apt-get update failed. Sudo may require a password. Proceeding anyway...');
+                    }
+
+                    // Install build-essential, cmake, libssl-dev, git, pkg-config
+                    const success = await runPkgManager('install', ['-y', 'cmake', 'build-essential', 'libssl-dev', 'git', 'pkg-config']);
+
                     if (!success) {
-                        send('\n[WARN] Installation failed. You may need to run this manually:');
-                        send('sudo apt-get update && sudo apt-get install -y cmake build-essential libssl-dev git');
+                        send('\n[WARN] Installation failed. Run this manually in a terminal:');
+                        send('sudo apt-get update && sudo apt-get install -y cmake build-essential libssl-dev git pkg-config');
                     }
                 }
 

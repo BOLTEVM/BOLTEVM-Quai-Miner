@@ -116,14 +116,16 @@ export async function GET(request: Request) {
         return NextResponse.json({
             networkHashrate,
             blockHeight,
-            difficulty: 'live', // now derived, not hardcoded
-            unpaidBalance: '0.00 QUAI',
-            totalPaid: balance,
+            // L-7 FIX: balance = current on-chain balance = unpaidBalance, not "total paid"
+            unpaidBalance: balance,
+            totalPaid: '0.00 QUAI',    // pool-level stat, not available from bare RPC
             payoutThreshold: '10.0 QUAI',
             transactions: [],
+            // L-8 FIX: server cannot know the browser worker's hashrate/temp
+            // These are now null so the client can substitute its own live values
             workerStats: {
-                hashrate: '462.7 total',
-                temp: '62°C',
+                hashrate: null,        // client fills from miner.worker.ts postMessage
+                temp: null,            // client fills if native GPU temp is available
                 status: 'Online',
             },
         });

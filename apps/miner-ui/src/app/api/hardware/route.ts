@@ -39,34 +39,59 @@ export async function GET() {
             // GPU: Try nvidia-smi first, then fallback to lspci
             try {
                 const { stdout: nvi } = await execAsync('nvidia-smi -L');
-                gpus = nvi.split('\n').filter(l => l.includes('GPU ')).map(l => l.split(': ')[1].split(' (')[0].trim());
+                // L-1 FIX: Optional chaining on split to avoid crash on trailing/empty lines
+                gpus = nvi.split('\n')
+                    .filter(l => l.includes('GPU ') && l.includes(': '))
+                    .map(l => l.split(': ')[1]?.split(' (')[0]?.trim() ?? l.trim());
             } catch {
                 try {
+                    // L-3 FIX: rejoin multi-colon segments after first ': ' to preserve full GPU name
                     const { stdout: pci } = await execAsync("lspci | grep -iE 'vga|3d|display'");
                     gpus = pci.split('\n').filter(l => l.trim()).map(l => {
                         const parts = l.split(': ');
-                        return parts.length > 1 ? parts[1].trim() : l.trim();
+                        return parts.length > 1 ? parts.slice(1).join(': ').trim() : l.trim();
                     });
                 } catch {}
             }
 
-            // CPU: Use lscpu
+            // CPU: Use lscpu with /proc/cpuinfo fallback
             try {
                 const { stdout: lscpu } = await execAsync('lscpu');
                 const lines = lscpu.split('\n');
-                const find = (key: string) => lines.find(l => l.includes(key))?.split(':')[1].trim();
-                
+                // L-4 FIX: Regex to split only on first colon, handles colons in model names
+                const find = (key: string) => {
+                    const line = lines.find(l => new RegExp(`^${key}\\s*:`).test(l));
+                    return line?.split(/:\s+/)[1]?.trim();
+                };
+
                 const name = find('Model name');
-                const sockets = parseInt(find('Socket(s)') || '1');
-                const coresPerSocket = parseInt(find('Core(s) per socket') || '1');
-                const threadsPerCore = parseInt(find('Thread(s) per core') || '1');
+                const sockets = parseInt(find('Socket\\(s\\)') || '1');
+                const coresPerSocket = parseInt(find('Core\\(s\\) per socket') || '1');
+                const threadsPerCore = parseInt(find('Thread\\(s\\) per core') || '1');
 
                 cpuData = {
                     name: name || 'Generic Linux CPU',
                     cores: sockets * coresPerSocket,
                     threads: sockets * coresPerSocket * threadsPerCore
                 };
-            } catch (e) {}
+            } catch {
+                // L-11 FIX: Fallback to /proc/cpuinfo for Alpine/minimal distros without lscpu
+                try {
+                    const { stdout: cpuinfo } = await execAsync("cat /proc/cpuinfo");
+                    const lines = cpuinfo.split('\n');
+                    const findField = (key: string) =>
+                        lines.find(l => l.startsWith(key))?.split(':')[1]?.trim();
+
+                    const name = findField('model name') || findField('Hardware') || 'Unknown CPU';
+                    const cpuCores = (cpuinfo.match(/^processor/gm) || []).length;
+
+                    cpuData = {
+                        name,
+                        cores: cpuCores,
+                        threads: cpuCores
+                    };
+                } catch {}
+            }
         } else if (platform === 'darwin') {
             // --- MACOS DETECTION (Limited) ---
             gpus = ['Apple Integrated GPU'];
