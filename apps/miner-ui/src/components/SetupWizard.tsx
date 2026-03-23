@@ -25,7 +25,16 @@ export default function SetupWizard() {
     const [isBuilding, setIsBuilding] = useState(false);
     const [buildSuccess, setBuildSuccess] = useState(false);
     const [depsOk, setDepsOk] = useState<boolean | null>(null);
+    const [isCheckingDeps, setIsCheckingDeps] = useState(false);
+    const [deps, setDeps] = useState<Array<{ name: string; required: boolean; ok: boolean; version: string | null; hint: string }>>([]);
     const [isRepairing, setIsRepairing] = useState(false);
+
+    // Auto-run dep check when user arrives at Step 3
+    useEffect(() => {
+        if (currentStep === 3 && depsOk === null && !isCheckingDeps) {
+            checkDependencies();
+        }
+    }, [currentStep]);
 
     useEffect(() => {
         if (currentStep === 4) {
@@ -65,14 +74,18 @@ export default function SetupWizard() {
     };
 
     const checkDependencies = async () => {
+        setIsCheckingDeps(true);
+        setDepsOk(null);
         try {
-            const response = await fetch('/api/hardware');
+            const response = await fetch('/api/check-deps');
             const data = await response.json();
-            // We can infer cmake/perl missing from the build failure, 
-            // but for a pre-check we can add a check-env API or just try to run them
-            setDepsOk(true); // Placeholder for initial state
+            setDeps(data.deps ?? []);
+            setDepsOk(data.ok ?? false);
         } catch (e) {
             setDepsOk(false);
+            setDeps([]);
+        } finally {
+            setIsCheckingDeps(false);
         }
     };
 
@@ -92,7 +105,7 @@ export default function SetupWizard() {
 
                 const text = decoder.decode(value);
                 const lines = text.split('\n').filter(l => l.trim());
-                setBuildLogs(prev => [...prev, ...lines]);
+                setBuildLogs(prev => [...prev, ...lines].slice(-100));
 
                 if (text.includes('[SUCCESS]')) setDepsOk(true);
             }
@@ -242,6 +255,42 @@ export default function SetupWizard() {
                         <h2>Build Optimized Binary</h2>
                         <p>Compiling official quai-gpu-miner from source for your specific hardware.</p>
 
+                        {/* Dependency Pre-flight Panel */}
+                        <div className="deps-panel glass-card">
+                            <div className="deps-header">
+                                <span>Build Environment Check</span>
+                                <button
+                                    className="btn-recheck"
+                                    onClick={checkDependencies}
+                                    disabled={isCheckingDeps}
+                                >
+                                    {isCheckingDeps ? <Loader2 size={12} className="animate-spin" /> : '↻'} Re-check
+                                </button>
+                            </div>
+
+                            {isCheckingDeps && deps.length === 0 ? (
+                                <div className="deps-scanning">
+                                    <Loader2 size={16} className="animate-spin" />
+                                    <span>Scanning environment...</span>
+                                </div>
+                            ) : deps.length > 0 ? (
+                                <div className="deps-list">
+                                    {deps.map(dep => (
+                                        <div key={dep.name} className={`dep-row ${dep.ok ? 'ok' : dep.required ? 'missing' : 'warn'}`}>
+                                            <span className="dep-icon">{dep.ok ? '✅' : dep.required ? '❌' : '⚠️'}</span>
+                                            <div className="dep-info">
+                                                <span className="dep-name">{dep.name}</span>
+                                                {dep.version && <span className="dep-version">{dep.version}</span>}
+                                                {!dep.ok && <span className="dep-hint">{dep.hint}</span>}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : depsOk === null ? (
+                                <div className="deps-scanning"><span>Click Re-check to probe your environment.</span></div>
+                            ) : null}
+                        </div>
+
                         <div className="build-terminal glass-card">
                             <div className="terminal-header">
                                 <Terminal size={14} />
@@ -251,7 +300,7 @@ export default function SetupWizard() {
                             <div className="terminal-body" id="build-logs">
                                 {buildLogs.length === 0 ? (
                                     <div className="empty-terminal">
-                                        {depsOk === false ? 'Environment issue detected (CMake/Perl missing).' : 'Ready to compile official miner source.'}
+                                        {depsOk === false ? 'Missing dependencies detected. Use Auto-Repair or install manually.' : 'Ready to compile official miner source.'}
                                     </div>
                                 ) : (
                                     buildLogs.map((log, i) => (
@@ -265,15 +314,23 @@ export default function SetupWizard() {
 
                         <div className="actions">
                             <button className="btn-ghost" onClick={prevStep} disabled={isBuilding || isRepairing}>Back</button>
-                            {buildLogs.some(l => l.includes('CMake configuration failed')) && !isRepairing && (
+                            {/* Show repair button if dep check found missing tools OR build failed with CMake error */}
+                            {(depsOk === false || buildLogs.some(l => l.includes('CMake configuration failed'))) && !isRepairing && (
                                 <button className="btn-primary warning" onClick={repairEnvironment}>
                                     Auto-Repair Environment (Install CMake/Perl)
                                 </button>
                             )}
                             {!buildSuccess ? (
-                                <button className="btn-primary" onClick={startBuild} disabled={isBuilding || isRepairing}>
-                                    {isBuilding ? 'Compiling Sources...' : 'Start Optimized Build'}
-                                </button>
+                                <>
+                                    <button className="btn-primary" onClick={startBuild} disabled={isBuilding || isRepairing}>
+                                        {isBuilding ? 'Compiling Sources...' : 'Start Optimized Build'}
+                                    </button>
+                                    {!isBuilding && !isRepairing && (
+                                        <button className="btn-ghost" onClick={nextStep} title="Skip build step (no native GPU acceleration)">
+                                            Skip (Web-Only Mode)
+                                        </button>
+                                    )}
+                                </>
                             ) : (
                                 <button className="btn-primary" onClick={nextStep}>Continue to Sync</button>
                             )}
@@ -319,7 +376,16 @@ export default function SetupWizard() {
 
                         <div className="actions">
                             <button className="btn-ghost" onClick={prevStep}>Back</button>
-                            <button className="btn-primary" onClick={nextStep} disabled={!wallet || wallet.length < 40}>
+                            <button
+                                className="btn-primary"
+                                onClick={nextStep}
+                                disabled={(() => {
+                                    if (!wallet || wallet.length < 42) return true;
+                                    if (!wallet.startsWith('0x')) return true;
+                                    if (!/^0x[0-9a-fA-F]{40}$/.test(wallet)) return true;
+                                    return false;
+                                })()}
+                            >
                                 Finalize Configuration
                             </button>
                         </div>
@@ -423,6 +489,24 @@ export default function SetupWizard() {
         .glass-input:focus { border-color: var(--accent-cyan); }
         .input-hint { font-size: 11px; color: var(--text-secondary); margin-top: 8px; }
         .animate-in { animation: fadeIn 0.4s ease-out; }
+
+        .deps-panel { margin-bottom: 20px; overflow: hidden; }
+        .deps-header { display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; background: rgba(255,255,255,0.04); border-bottom: 1px solid var(--glass-border); font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; }
+        .btn-recheck { background: transparent; border: 1px solid var(--glass-border); color: var(--accent-cyan); border-radius: 6px; padding: 4px 10px; font-size: 11px; cursor: pointer; display: flex; align-items: center; gap: 4px; }
+        .btn-recheck:hover { border-color: var(--accent-cyan); background: rgba(0,242,255,0.05); }
+        .btn-recheck:disabled { opacity: 0.5; cursor: not-allowed; }
+        .deps-list { padding: 8px 0; }
+        .dep-row { display: flex; align-items: flex-start; gap: 12px; padding: 8px 16px; border-bottom: 1px solid rgba(255,255,255,0.04); transition: background 0.15s; }
+        .dep-row:last-child { border: none; }
+        .dep-row.ok { }
+        .dep-row.missing { background: rgba(255, 85, 85, 0.04); }
+        .dep-row.warn  { background: rgba(255, 204, 0, 0.03); }
+        .dep-icon { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+        .dep-info { display: flex; flex-direction: column; gap: 2px; }
+        .dep-name { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+        .dep-version { font-size: 11px; color: #50fa7b; font-family: monospace; }
+        .dep-hint { font-size: 11px; color: var(--text-secondary); margin-top: 2px; line-height: 1.4; }
+        .deps-scanning { display: flex; align-items: center; gap: 10px; padding: 14px 16px; color: var(--text-secondary); font-size: 13px; }
       `}</style>
         </div>
     );

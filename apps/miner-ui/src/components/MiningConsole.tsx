@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { Terminal, Activity, ChevronRight } from 'lucide-react';
-import { estimateHashrate, convertToStandardUnit } from '../utils/hashrate';
+import { estimateHashrate, convertToMHs } from '../utils/hashrate';
 
 interface Log {
   id: number;
@@ -19,7 +19,9 @@ interface MiningConsoleProps {
 export default function MiningConsole({ onBlockFound, onHashrateUpdate }: MiningConsoleProps) {
   const [logs, setLogs] = useState<Log[]>([]);
   const [activePool, setActivePool] = useState('cyprus1.rpc.quai.network');
-  const [worker, setWorker] = useState<Worker | null>(null);
+  const [isWorkerActive, setIsWorkerActive] = useState(false);
+  // Use a ref so the cleanup closure always holds the live worker instance
+  const workerRef = useRef<Worker | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const logId = useRef(0);
 
@@ -36,7 +38,7 @@ export default function MiningConsole({ onBlockFound, onHashrateUpdate }: Mining
 
   useEffect(() => {
     const storedState = localStorage.getItem('miner_state');
-    let totalMh = 0;
+    let totalMHs = 0;
     let poolUrl = 'stratum+tcp://quai.pool.bolt-evm.com:3333';
     let intensity = 'Medium (Standard)';
     let isMiningActive = false;
@@ -53,12 +55,12 @@ export default function MiningConsole({ onBlockFound, onHashrateUpdate }: Mining
         if (state.mode === 'gpu' || state.mode === 'dual') {
           state.gpus.forEach((gpu: string) => {
             const est = estimateHashrate(gpu, 'gpu');
-            totalMh += convertToStandardUnit(est.value, est.unit);
+            totalMHs += convertToMHs(est.value, est.unit);
           });
         }
         if (state.mode === 'cpu' || state.mode === 'dual') {
           const est = estimateHashrate(state.cpu?.name || '', 'cpu');
-          totalMh += convertToStandardUnit(est.value, est.unit);
+          totalMHs += convertToMHs(est.value, est.unit);
         }
       }
     }
@@ -71,7 +73,7 @@ export default function MiningConsole({ onBlockFound, onHashrateUpdate }: Mining
     if (isMiningActive) {
       addLog(`Hardware Pipeline Initialized. Intensity: ${intensity}`, 'success');
 
-      // Start Real Hashing Worker
+      // Start Real Hashing Worker (stored in ref so cleanup always has the live instance)
       const minerWorker = new Worker(new URL('../workers/miner.worker.ts', import.meta.url));
       minerWorker.postMessage({ type: 'START', intensity, wallet: JSON.parse(storedState || '{}').wallet });
 
@@ -85,7 +87,8 @@ export default function MiningConsole({ onBlockFound, onHashrateUpdate }: Mining
           if (onBlockFound) onBlockFound();
         }
       };
-      setWorker(minerWorker);
+      workerRef.current = minerWorker;
+      setIsWorkerActive(true);
     } else {
       addLog('Miner is currently paused. Go to Miners page to start.', 'warning');
     }
@@ -109,7 +112,11 @@ export default function MiningConsole({ onBlockFound, onHashrateUpdate }: Mining
 
     return () => {
       clearInterval(interval);
-      if (worker) worker.terminate();
+      // workerRef.current always holds the live instance (not stale closure)
+      if (workerRef.current) {
+        workerRef.current.terminate();
+        workerRef.current = null;
+      }
     };
   }, []);
 
@@ -127,8 +134,8 @@ export default function MiningConsole({ onBlockFound, onHashrateUpdate }: Mining
           <h4>Mining Process Console</h4>
         </div>
         <div className="connection-pill">
-          <div className={`dot ${worker ? 'active' : ''}`}></div>
-          {worker ? 'ACTIVE HASHING' : 'READY'} - {activePool}
+          <div className={`dot ${isWorkerActive ? 'active' : ''}`}></div>
+          {isWorkerActive ? 'ACTIVE HASHING' : 'READY'} - {activePool}
         </div>
       </div>
       <div className="console-body" ref={scrollRef}>

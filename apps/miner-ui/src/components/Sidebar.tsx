@@ -1,6 +1,12 @@
+'use client';
+
+import { usePathname } from 'next/navigation';
 import { LayoutDashboard, Users, Settings, Zap, Database, Cpu } from 'lucide-react'
 
 export default function Sidebar() {
+  const pathname = usePathname();
+  const isActive = (href: string) => pathname === href;
+
   return (
     <aside className="sidebar glass-card">
       <div className="logo-section">
@@ -8,23 +14,23 @@ export default function Sidebar() {
         <h2>BoltEVM</h2>
       </div>
       <nav className="nav-menu">
-        <a href="/" className="nav-link active">
+        <a href="/" className={`nav-link ${isActive('/') ? 'active' : ''}`}>
           <LayoutDashboard size={20} />
           <span>Dashboard</span>
         </a>
-        <a href="/setup" className="nav-link">
+        <a href="/setup" className={`nav-link ${isActive('/setup') ? 'active' : ''}`}>
           <Zap size={20} />
           <span>1-Click Setup</span>
         </a>
-        <a href="/miners" className="nav-link">
+        <a href="/miners" className={`nav-link ${isActive('/miners') ? 'active' : ''}`}>
           <Users size={20} />
           <span>Miners</span>
         </a>
-        <a href="/rewards" className="nav-link">
+        <a href="/rewards" className={`nav-link ${isActive('/rewards') ? 'active' : ''}`}>
           <Zap size={20} />
           <span>Rewards</span>
         </a>
-        <a href="/settings" className="nav-link">
+        <a href="/settings" className={`nav-link ${isActive('/settings') ? 'active' : ''}`}>
           <Settings size={20} />
           <span>Settings</span>
         </a>

@@ -57,7 +57,7 @@ export default function MinerInstructions() {
               git submodule update --init --recursive<br />
               mkdir build && cd build<br />
               {os === 'windows' ? (
-                <>cmake .. -G "Visual Studio 15 2017 Win64" -T v140<br />cmake --build . --config Release</>
+                <>cmake .. -G "Visual Studio 15 2017" -A x64 -T v140<br />cmake --build . --config Release</>
               ) : (
                 <>cmake ..<br />cmake --build .</>
               )}

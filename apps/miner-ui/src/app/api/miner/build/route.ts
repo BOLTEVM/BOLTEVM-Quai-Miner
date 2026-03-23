@@ -42,12 +42,33 @@ export async function POST(request: Request) {
                     'C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Professional\\VC\\Auxiliary\\Build\\vcvars64.bat',
                     'C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Enterprise\\VC\\Auxiliary\\Build\\vcvars64.bat',
                     'C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\VC\\Auxiliary\\Build\\vcvars64.bat',
-                    'C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Enterprise\\VC\\Auxiliary\\Build\\vcvars64.bat'
+                    'C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Enterprise\\VC\\Auxiliary\\Build\\vcvars64.bat',
+                    'C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Auxiliary\\Build\\vcvars64.bat',
+                    'C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\BuildTools\\VC\\Auxiliary\\Build\\vcvars64.bat',
+                    'C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\BuildTools\\VC\\Auxiliary\\Build\\vcvars64.bat'
                 ];
                 for (const p of vsPaths) {
                     if (fs.existsSync(p)) return `"${p}"`;
                 }
                 return null;
+            };
+
+            // Detect VS version using vswhere for the correct CMake generator string
+            const detectVsGenerator = (): string => {
+                const vswhere = 'C:\\Program Files (x86)\\Microsoft Visual Studio\\Installer\\vswhere.exe';
+                if (fs.existsSync(vswhere)) {
+                    try {
+                        const { execSync } = require('child_process');
+                        const output = execSync(`"${vswhere}" -latest -property installationVersion`, { encoding: 'utf8' }).trim();
+                        const major = parseInt(output.split('.')[0], 10);
+                        if (major >= 17) return 'Visual Studio 17 2022';
+                        if (major >= 16) return 'Visual Studio 16 2019';
+                    } catch {}
+                }
+                // Check path hints as fallback
+                if (fs.existsSync('C:\\Program Files\\Microsoft Visual Studio\\2022')) return 'Visual Studio 17 2022';
+                if (fs.existsSync('C:\\Program Files (x86)\\Microsoft Visual Studio\\2019')) return 'Visual Studio 16 2019';
+                return 'Visual Studio 15 2017'; // Legacy fallback
             };
 
             const cmakeCmd = findCmake();
@@ -112,8 +133,10 @@ export async function POST(request: Request) {
                     send('Created build directory.');
                 }
 
-                // 3. CMake Configure
-                const cmakeOk = await runCommand(cmakeCmd, ['..', '-G', '"Visual Studio 15 2017"', '-A', 'x64', '-T', 'v140', '-DCMAKE_POLICY_VERSION_MINIMUM=3.5'], buildDir);
+                // 3. CMake Configure (generator auto-detected from installed VS version)
+                const vsGenerator = detectVsGenerator();
+                send(`Using CMake generator: ${vsGenerator}`);
+                const cmakeOk = await runCommand(cmakeCmd, ['..', '-G', `"${vsGenerator}"`, '-A', 'x64', '-DCMAKE_POLICY_VERSION_MINIMUM=3.5'], buildDir);
                 if (!cmakeOk) throw new Error('CMake configuration failed');
 
                 // 4. CMake Build
