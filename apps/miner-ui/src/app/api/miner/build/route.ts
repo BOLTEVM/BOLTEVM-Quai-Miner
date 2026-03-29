@@ -50,18 +50,28 @@ export async function POST(request: Request) {
                 return new Promise((resolve) => {
                     let finalCmd = cmd;
                     let finalArgs = args;
+                    let windowsVerbatimOptions = {};
 
                     if (platform === 'win32' && vcvars) {
+                        const escapedArgs = args.map(a => (a.includes(' ') && !a.startsWith('"')) ? `"${a}"` : a);
                         finalCmd = 'cmd.exe';
-                        const escapedArgs = args.map(a => a.includes(' ') ? `"${a}"` : a);
-                        finalArgs = ['/c', `${vcvars} && ${cmd} ${escapedArgs.join(' ')}`];
+                        // Wrap the entire command chain in outer quotes for cmd.exe /s /c "..."
+                        finalArgs = ['/s', '/c', `"${vcvars} && ${cmd} ${escapedArgs.join(' ')}"`];
+                        windowsVerbatimOptions = { windowsVerbatimArguments: true };
+                    }
+
+                    const customEnv: NodeJS.ProcessEnv = { ...process.env, CMAKE_POLICY_VERSION_MINIMUM: '3.5' };
+                    if (platform === 'win32' && vcvars) {
+                        const vcvarsRaw = vcvars.replace(/"/g, '');
+                        customEnv['VS160COMNTOOLS'] = path.dirname(vcvarsRaw) + '\\';
                     }
 
                     send(`\n> ${cmd} ${args.join(' ')}`);
                     const child = spawn(finalCmd, finalArgs, {
                         cwd,
-                        shell: true,
-                        env: { ...process.env, CMAKE_POLICY_VERSION_MINIMUM: '3.5' }
+                        shell: platform !== 'win32',
+                        ...windowsVerbatimOptions,
+                        env: customEnv
                     });
 
                     child.stdout.on('data', (d) => send(d.toString()));
@@ -76,6 +86,17 @@ export async function POST(request: Request) {
                 // 1. Git submodule update
                 if (!await runCommand('git', ['submodule', 'update', '--init', '--recursive'], buildPath)) {
                     throw new Error('Git submodule update failed');
+                }
+
+                // Inject HunterGate Native VS 2022 compatibility upgrade avoiding explicit submodule forks
+                const cmakeFilePath = path.join(buildPath, 'CMakeLists.txt');
+                if (fs.existsSync(cmakeFilePath)) {
+                    let cmakeContent = fs.readFileSync(cmakeFilePath, 'utf8');
+                    cmakeContent = cmakeContent.replace('v0.23.214', 'v0.24.28');
+                    cmakeContent = cmakeContent.replace('e14bc153a7f16d6a5eeec845fb0283c8fad8c358', '1d3c0fb8d4a6dfccdbacae3edaa38d336cf98d5c');
+                    cmakeContent = cmakeContent.replace('ruslo/hunter', 'cpp-pm/hunter');
+                    fs.writeFileSync(cmakeFilePath, cmakeContent, 'utf8');
+                    send('Injected dynamic HunterGate version patch for MSVC 19.3x compatibility.');
                 }
 
                 // 2. Create build dir and clear old CMake cache safely
