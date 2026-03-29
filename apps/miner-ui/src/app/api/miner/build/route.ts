@@ -24,6 +24,8 @@ export async function POST(request: Request) {
                     'C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat',
                     'C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat',
                     'C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Auxiliary\\Build\\vcvars64.bat',
+                    'C:\\Program Files\\Microsoft Visual Studio\\2022\\Professional\\VC\\Auxiliary\\Build\\vcvars64.bat',
+                    'C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\VC\\Auxiliary\\Build\\vcvars64.bat'
                 ];
                 return vsPaths.find(p => fs.existsSync(p)) ? `"${vsPaths.find(p => fs.existsSync(p))}"` : null;
             };
@@ -42,7 +44,6 @@ export async function POST(request: Request) {
                 return 'Visual Studio 15 2017';
             };
 
-            // L-5 FIX: Hoist vcvars resolution outside runCommand to avoid per-call filesystem scans
             const vcvars = findVcvars();
 
             const runCommand = (cmd: string, args: string[], cwd: string): Promise<boolean> => {
@@ -52,7 +53,8 @@ export async function POST(request: Request) {
 
                     if (platform === 'win32' && vcvars) {
                         finalCmd = 'cmd.exe';
-                        finalArgs = ['/c', `${vcvars} && ${cmd} ${args.join(' ')}`];
+                        const escapedArgs = args.map(a => a.includes(' ') ? `"${a}"` : a);
+                        finalArgs = ['/c', `${vcvars} && ${cmd} ${escapedArgs.join(' ')}`];
                     }
 
                     send(`\n> ${cmd} ${args.join(' ')}`);
@@ -76,17 +78,25 @@ export async function POST(request: Request) {
                     throw new Error('Git submodule update failed');
                 }
 
-                // 2. Create build dir
+                // 2. Create build dir and clear old CMake cache safely
                 const buildDir = path.join(buildPath, 'build');
                 if (!fs.existsSync(buildDir)) {
-                    fs.mkdirSync(buildDir);
+                    fs.mkdirSync(buildDir, { recursive: true });
                     send('Created build directory.');
+                } else {
+                    try {
+                        const cacheFile = path.join(buildDir, 'CMakeCache.txt');
+                        const cMakeFiles = path.join(buildDir, 'CMakeFiles');
+                        if (fs.existsSync(cacheFile)) fs.unlinkSync(cacheFile);
+                        if (fs.existsSync(cMakeFiles)) fs.rmSync(cMakeFiles, { recursive: true, force: true });
+                        send('Cleared old CMake cache to prevent generator conflicts.');
+                    } catch (e: any) {
+                        send(`Warning: Could not fully clear CMake cache (${e.message}). The build will proceed.`);
+                    }
                 }
 
                 // 3. CMake Configure
                 let cmakeArgs = ['..', '-DCMAKE_BUILD_TYPE=Release'];
-                // L-6 FIX: Do NOT wrap gen in extra quotes — spawn handles escaping.
-                // The nested "\'generator name'\" was causing CMake to report "No such generator"
                 if (platform === 'win32') {
                     const gen = detectVsGenerator();
                     cmakeArgs.push('-G', gen, '-A', 'x64');
