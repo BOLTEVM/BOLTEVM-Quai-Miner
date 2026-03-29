@@ -64,6 +64,21 @@ export async function POST(request: Request) {
                     if (platform === 'win32' && vcvars) {
                         const vcvarsRaw = vcvars.replace(/"/g, '');
                         customEnv['VS160COMNTOOLS'] = path.dirname(vcvarsRaw) + '\\';
+
+                        // Patch Bintray CDN failure universally for Hunter v0.23.214's Boost definition
+                        try {
+                            const hunterBoostPath = path.join(os.homedir(), '.hunter', '_Base', 'Download', 'Hunter', '0.23.214', 'e14bc15', 'Unpacked', 'cmake', 'projects', 'Boost', 'hunter.cmake');
+                            if (fs.existsSync(hunterBoostPath)) {
+                                let hunterContent = fs.readFileSync(hunterBoostPath, 'utf8');
+                                if (hunterContent.includes('dl.bintray.com')) {
+                                    hunterContent = hunterContent.replace(/dl\.bintray\.com\/boostorg/g, 'archives.boost.io');
+                                    fs.writeFileSync(hunterBoostPath, hunterContent, 'utf8');
+                                    send('Injected dynamic Bintray CDN mirror bypass for Boost archives.');
+                                }
+                            }
+                        } catch (e) {
+                            send(`Warning: Failed to patch robust Boost mirror: ${e}`);
+                        }
                     }
 
                     send(`\n> ${cmd} ${args.join(' ')}`);
