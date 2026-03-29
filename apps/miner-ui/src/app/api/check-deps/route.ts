@@ -78,8 +78,7 @@ export async function GET() {
     if (platform === 'win32') {
         const perl = await probe(
             'Perl',
-            // L-12 FIX: single-quotes prevent $] from being shell-expanded before perl sees it
-            "perl -e 'print $]'",
+            'perl -v',
             true,
             'Required for OpenSSL. Install Strawberry Perl.'
         );
