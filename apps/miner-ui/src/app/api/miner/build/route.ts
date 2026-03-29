@@ -88,17 +88,6 @@ export async function POST(request: Request) {
                     throw new Error('Git submodule update failed');
                 }
 
-                // Inject HunterGate Native VS 2022 compatibility upgrade avoiding explicit submodule forks
-                const cmakeFilePath = path.join(buildPath, 'CMakeLists.txt');
-                if (fs.existsSync(cmakeFilePath)) {
-                    let cmakeContent = fs.readFileSync(cmakeFilePath, 'utf8');
-                    cmakeContent = cmakeContent.replace('v0.23.214', 'v0.24.28');
-                    cmakeContent = cmakeContent.replace('e14bc153a7f16d6a5eeec845fb0283c8fad8c358', '1d3c0fb8d4a6dfccdbacae3edaa38d336cf98d5c');
-                    cmakeContent = cmakeContent.replace('ruslo/hunter', 'cpp-pm/hunter');
-                    fs.writeFileSync(cmakeFilePath, cmakeContent, 'utf8');
-                    send('Injected dynamic HunterGate version patch for MSVC 19.3x compatibility.');
-                }
-
                 // 2. Create build dir and clear old CMake cache safely
                 const buildDir = path.join(buildPath, 'build');
                 if (!fs.existsSync(buildDir)) {
