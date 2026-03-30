@@ -60,11 +60,18 @@ export async function POST(request: Request) {
                         windowsVerbatimOptions = { windowsVerbatimArguments: true };
                     }
 
-                    const customEnv: NodeJS.ProcessEnv = { ...process.env, CMAKE_POLICY_VERSION_MINIMUM: '3.5' };
+                    const customEnv: NodeJS.ProcessEnv = {
+                        ...process.env,
+                        // Tell CMake's find_package / policy system we are modern
+                        CMAKE_POLICY_VERSION_MINIMUM: '3.5',
+                        // Suppress Hunter cache server SSL errors at the curl level:
+                        // HUNTER_USE_CACHE_SERVERS=NO is passed as a -D arg but this
+                        // env var provides a belt-and-suspenders guard.
+                        HUNTER_USE_CACHE_SERVERS: 'NO',
+                    };
                     if (platform === 'win32' && vcvars) {
                         const vcvarsRaw = vcvars.replace(/"/g, '');
                         customEnv['VS160COMNTOOLS'] = path.dirname(vcvarsRaw) + '\\';
-
                         // Dynamic Bintray CDN mirror bypass handled natively by cmake/Hunter/patch-hunter.cmake
                     }
 
@@ -108,10 +115,25 @@ export async function POST(request: Request) {
                 }
 
                 // 3. CMake Configure
-                let cmakeArgs = ['..', '-DCMAKE_BUILD_TYPE=Release'];
+                // -DHUNTER_USE_CACHE_SERVERS=NO  : Disables Hunter cache server lookups.
+                //    The cache.hunter.sh CDN has an expired SSL cert (curl error 60),
+                //    which causes a hard fatal error. We build from source instead.
+                // -Wno-dev                        : Suppresses CMake deprecation warnings
+                //    from Hunter's legacy internal files (cmake_minimum_required < 3.5).
+                // -DCMAKE_POLICY_DEFAULT_CMP0048=NEW : Silences VERSION policy warnings.
+                let cmakeArgs = [
+                    '..',
+                    '-DCMAKE_BUILD_TYPE=Release',
+                    '-DHUNTER_USE_CACHE_SERVERS=NO',
+                    '-DHUNTER_JOBS_NUMBER=4',
+                    '-DCMAKE_POLICY_DEFAULT_CMP0048=NEW',
+                    '-Wno-dev',
+                ];
                 if (platform === 'win32') {
                     const gen = detectVsGenerator();
                     cmakeArgs.push('-G', gen, '-A', 'x64');
+                    // Disable CUDA on Windows to avoid nvcc dependency if CUDA is not installed
+                    cmakeArgs.push('-DETHASHCUDA=OFF');
                 }
 
                 if (!await runCommand('cmake', cmakeArgs, buildDir)) {
