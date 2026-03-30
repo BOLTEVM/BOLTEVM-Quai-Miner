@@ -65,20 +65,7 @@ export async function POST(request: Request) {
                         const vcvarsRaw = vcvars.replace(/"/g, '');
                         customEnv['VS160COMNTOOLS'] = path.dirname(vcvarsRaw) + '\\';
 
-                        // Patch Bintray CDN failure universally for Hunter v0.23.214's Boost definition
-                        try {
-                            const hunterBoostPath = path.join(os.homedir(), '.hunter', '_Base', 'Download', 'Hunter', '0.23.214', 'e14bc15', 'Unpacked', 'cmake', 'projects', 'Boost', 'hunter.cmake');
-                            if (fs.existsSync(hunterBoostPath)) {
-                                let hunterContent = fs.readFileSync(hunterBoostPath, 'utf8');
-                                if (hunterContent.includes('dl.bintray.com')) {
-                                    hunterContent = hunterContent.replace(/dl\.bintray\.com\/boostorg/g, 'archives.boost.io');
-                                    fs.writeFileSync(hunterBoostPath, hunterContent, 'utf8');
-                                    send('Injected dynamic Bintray CDN mirror bypass for Boost archives.');
-                                }
-                            }
-                        } catch (e) {
-                            send(`Warning: Failed to patch robust Boost mirror: ${e}`);
-                        }
+                        // Dynamic Bintray CDN mirror bypass handled natively by cmake/Hunter/patch-hunter.cmake
                     }
 
                     send(`\n> ${cmd} ${args.join(' ')}`);
@@ -101,32 +88,6 @@ export async function POST(request: Request) {
                 // 1. Git submodule update
                 if (!await runCommand('git', ['submodule', 'update', '--init', '--recursive'], buildPath)) {
                     throw new Error('Git submodule update failed');
-                }
-
-                // Inject HunterGate Native VS 2022 compatibility upgrade avoiding explicit submodule forks
-                try {
-                    const cmakeFilePath = path.join(buildPath, 'CMakeLists.txt');
-                    if (fs.existsSync(cmakeFilePath)) {
-                        let cmakeContent = fs.readFileSync(cmakeFilePath, 'utf8');
-                        if (cmakeContent.includes('v0.23.214')) {
-                            cmakeContent = cmakeContent.replace('v0.23.214', 'v0.24.28');
-                            cmakeContent = cmakeContent.replace('e14bc153a7f16d6a5eeec845fb0283c8fad8c358', '1d3c0fb8d4a6dfccdbacae3edaa38d336cf98d5c');
-                            cmakeContent = cmakeContent.replace('ruslo/hunter', 'cpp-pm/hunter');
-                            fs.writeFileSync(cmakeFilePath, cmakeContent, 'utf8');
-
-                            // We must additionally bypass CMake 4.3 Policy 3.5 deprecation error in HunterGate's internal generation sequence
-                            const hunterGatePath = path.join(buildPath, 'cmake', 'cable', 'HunterGate.cmake');
-                            if (fs.existsSync(hunterGatePath)) {
-                                let hunterGateContent = fs.readFileSync(hunterGatePath, 'utf8');
-                                hunterGateContent = hunterGateContent.replace('"-G${CMAKE_GENERATOR}"', '"-G${CMAKE_GENERATOR}"\n      "-DCMAKE_POLICY_VERSION_MINIMUM=3.5"');
-                                fs.writeFileSync(hunterGatePath, hunterGateContent, 'utf8');
-                            }
-
-                            send('Injected dynamic HunterGate repository replacement to enable v0.24.28 native MSVC 19.3x compilation.');
-                        }
-                    }
-                } catch (err) {
-                    send(`Warning: Failed to upgrade submodule HunterGate pointer natively: ${err}`);
                 }
 
                 // 2. Create build dir and clear old CMake cache safely
