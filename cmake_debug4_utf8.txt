@@ -1,0 +1,507 @@
+﻿cmake : CMake Deprecation 
+Warning at 
+CMakeLists.txt:1 
+(cmake_minimum_required):
+At line:1 char:1
++ cmake -S 
+apps/quai-gpu-miner -B 
+apps/quai-gpu-miner/build 
+-G "Visual  ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~
+    + CategoryInfo         
+     : NotSpecified: (CMa  
+  ke Deprecati...imum_re   
+ quired)::String) [], R    
+emoteException
+    + FullyQualifiedErrorI 
+   d : NativeCommandError
+ 
+  Compatibility with CMake 
+< 3.10 will be removed 
+from a future version of
+  CMake.
+
+  Update the VERSION 
+argument <min> value.  Or, 
+use the <min>...<max> 
+syntax
+  to tell CMake that the 
+project requires at least 
+<min> but has been updated
+  to work with policies 
+introduced by <max> or 
+earlier.
+
+
+-- [cable ] Cable 0.5.0 initialized
+CMake Warning (dev) at 
+C:/Program Files/CMake/shar
+e/cmake-4.3/Modules/GNUInst
+allDirs.cmake:455 
+(message):
+  Unable to determine 
+default 
+CMAKE_INSTALL_LIBDIR 
+directory because no
+  target architecture is 
+known.  Please enable at 
+least one language before
+  including GNUInstallDirs.
+Call Stack (most recent 
+call first):
+  C:/Program Files/CMake/sh
+are/cmake-4.3/Modules/GNUIn
+stallDirs.cmake:287 (_GNUIn
+stallDirs_LIBDIR_get_defaul
+t)
+  C:/Program Files/CMake/sh
+are/cmake-4.3/Modules/GNUIn
+stallDirs.cmake:287 
+(cmake_language)
+  C:/Program Files/CMake/sh
+are/cmake-4.3/Modules/GNUIn
+stallDirs.cmake:547 (_GNUIn
+stallDirs_cache_path)
+  cmake/cable/CableBuildInf
+o.cmake:16 (include)
+  CMakeLists.txt:5 
+(include)
+This warning is for 
+project developers.  Use 
+-Wno-dev to suppress it.
+
+CMake Warning (dev) at 
+C:/Program Files/CMake/shar
+e/cmake-4.3/Modules/GNUInst
+allDirs.cmake:455 
+(message):
+  Unable to determine 
+default 
+CMAKE_INSTALL_LIBDIR 
+directory because no
+  target architecture is 
+known.  Please enable at 
+least one language before
+  including GNUInstallDirs.
+Call Stack (most recent 
+call first):
+  C:/Program Files/CMake/sh
+are/cmake-4.3/Modules/GNUIn
+stallDirs.cmake:298 (_GNUIn
+stallDirs_LIBDIR_get_defaul
+t)
+  C:/Program Files/CMake/sh
+are/cmake-4.3/Modules/GNUIn
+stallDirs.cmake:298 
+(cmake_language)
+  C:/Program Files/CMake/sh
+are/cmake-4.3/Modules/GNUIn
+stallDirs.cmake:547 (_GNUIn
+stallDirs_cache_path)
+  cmake/cable/CableBuildInf
+o.cmake:16 (include)
+  CMakeLists.txt:5 
+(include)
+This warning is for 
+project developers.  Use 
+-Wno-dev to suppress it.
+
+-- [hunter *** DEBUG *** 2026-03-29T18:53:29] HUNTER_ROOT set using SYSTEMDRIVE environment variable
+-- [hunter *** DEBUG *** 2026-03-29T18:53:29] HUNTER_ROOT: C:/.hunter
+-- [hunter *** DEBUG *** 2026-03-29T18:53:29] Locking directory: C:/.hunter/_Base/Download/Hunter/0.24.28/1d3c0fb
+-- [hunter *** DEBUG *** 2026-03-29T18:53:29] Lock done
+-- [hunter *** DEBUG *** 2026-03-29T18:53:29] Run generate
+CMake Deprecation Warning 
+at CMakeLists.txt:1 
+(cmake_minimum_required):
+  Compatibility with CMake 
+< 3.10 will be removed 
+from a future version of
+  CMake.
+
+  Update the VERSION 
+argument <min> value.  Or, 
+use the <min>...<max> 
+syntax
+  to tell CMake that the 
+project requires at least 
+<min> but has been updated
+  to work with policies 
+introduced by <max> or 
+earlier.
+
+
+-- Selecting Windows SDK version 10.0.26100.0 to target Windows 10.0.26200.
+CMake Warning (dev) at 
+C:/Program Files/CMake/shar
+e/cmake-4.3/Modules/Externa
+lProject/shared_internal_co
+mmands.cmake:1261 
+(message):
+  The 
+DOWNLOAD_EXTRACT_TIMESTAMP 
+option was not given and 
+policy CMP0135 is
+  not set.  The policy's 
+OLD behavior will be used. 
+ When using a URL
+  download, the timestamps 
+of extracted files should 
+preferably be that of
+  the time of extraction, 
+otherwise code that 
+depends on the extracted
+  contents might not be 
+rebuilt if the URL 
+changes.  The OLD behavior
+  preserves the timestamps 
+from the archive instead, 
+but this is usually not
+  what you want.  Update 
+your project to the NEW 
+behavior or specify the
+  
+DOWNLOAD_EXTRACT_TIMESTAMP 
+option with a value of 
+true to avoid this
+  robustness issue.
+Call Stack (most recent 
+call first):
+  C:/Program Files/CMake/sh
+are/cmake-4.3/Modules/Exter
+nalProject.cmake:3258 
+(_ep_add_download_command)
+  CMakeLists.txt:4 
+(ExternalProject_Add)
+This warning is for 
+project developers.  Use 
+-Wno-dev to suppress it.
+
+-- Configuring done (6.4s)
+-- Generating done (0.2s)
+-- Build files have been written to: C:/.hunter/_Base/Download/Hunter/0.24.28/1d3c0fb/Build
+-- [hunter] Initializing Hunter workspace (1d3c0fb8d4a6dfccdbacae3edaa38d336cf98d5c)
+-- [hunter]   https://github.com/cpp-pm/hunter/archive/v0.24.28.tar.gz
+-- [hunter]   -> C:/.hunter/_Base/Download/Hunter/0.24.28/1d3c0fb
+MSBuild version 17.14.40+3e7442088 for .NET Framework
+
+  1>Checking Build System
+  Creating directories for 'Hunter'
+  Building Custom Rule C:/.hunter/_Base/Download/Hunter/0.24.28/1d3c0fb/CMakeLists.txt
+  Performing download step (download, verify and extract) for 'Hunter'
+  -- Downloading...
+     dst='C:/.hunter/_Base/Download/Hunter/0.24.28/1d3c0fb/v0.24.28.tar.gz'
+     timeout='none'
+     inactivity timeout='none'
+  -- Using src='https://github.com/cpp-pm/hunter/archive/v0.24.28.tar.gz'
+  CMake Error at Build/Hunter-prefix/src/Hunter-stamp/download-Hunter.cmake:163 (message):
+    Each download failed!
+  
+CUSTOMBUILD : error : downloading 'https://github.com/cpp-pm/hunter/archive/v0.24.28.tar.gz' failed [C:\.hunter\_Base\Download\Hunter\0.24.28\1d3c0fb\Build\Hunter.vcxproj]
+            status_code: 22
+            status_string: "HTTP response code said error"
+            log:
+            --- LOG BEGIN ---
+            timeout on name lookup is not supported
+  
+    Host github.com:443 was resolved.
+  
+    IPv6: (none)
+  
+    IPv4: 20.26.156.215
+  
+      Trying 20.26.156.215:443...
+  
+    schannel: disabled automatic use of client certificate
+  
+    ALPN: curl offers h2,http/1.1
+  
+    ALPN: server accepted h2
+  
+    Established connection to github.com (20.26.156.215 port 443) from 10.7.0.2
+    port 51910
+  
+    using HTTP/2
+  
+    [HTTP/2] [1] OPENED stream for
+    https://github.com/cpp-pm/hunter/archive/v0.24.28.tar.gz
+  
+    [HTTP/2] [1] [:method: GET]
+  
+    [HTTP/2] [1] [:scheme: https]
+  
+    [HTTP/2] [1] [:authority: github.com]
+  
+    [HTTP/2] [1] [:path: /cpp-pm/hunter/archive/v0.24.28.tar.gz]
+  
+    [HTTP/2] [1] [user-agent: curl/8.18.0]
+  
+    [HTTP/2] [1] [accept: */*]
+  
+    GET /cpp-pm/hunter/archive/v0.24.28.tar.gz HTTP/2
+  
+    Host: github.com
+  
+    User-Agent: curl/8.18.0
+  
+    Accept: */*
+  
+    
+  
+    Request completely sent off
+  
+    schannel: remote party requests renegotiation
+  
+    schannel: renegotiating SSL/TLS connection
+  
+    schannel: SSL/TLS connection renegotiated
+  
+    schannel: remote party requests renegotiation
+  
+    schannel: renegotiating SSL/TLS connection
+  
+    schannel: SSL/TLS connection renegotiated
+  
+    HTTP/2 302 
+  
+    date: Sun, 29 Mar 2026 22:53:45 GMT
+  
+    content-type: text/html; charset=utf-8
+  
+    content-length: 0
+  
+    vary: X-PJAX, X-PJAX-Container, Turbo-Visit, Turbo-Frame, X-Requested-With,
+    Sec-Fetch-Site,Accept-Encoding, Accept, X-Requested-With
+  
+    location: https://codeload.github.com/cpp-pm/hunter/tar.gz/v0.24.28
+  
+    cache-control: max-age=0, private
+  
+    strict-transport-security: max-age=31536000; includeSubdomains; preload
+  
+    x-frame-options: deny
+  
+    x-content-type-options: nosniff
+  
+    x-xss-protection: 0
+  
+    referrer-policy: no-referrer-when-downgrade
+  
+    content-security-policy: default-src 'none'; base-uri 'self'; child-src
+    github.githubassets.com github.com/assets-cdn/worker/ github.com/assets/
+    gist.github.com/assets-cdn/worker/; connect-src 'self' uploads.github.com
+    www.githubstatus.com collector.github.com raw.githubusercontent.com
+    api.github.com github-cloud.s3.amazonaws.com
+    github-production-repository-file-5c1aeb.s3.amazonaws.com
+    github-production-upload-manifest-file-7fdce7.s3.amazonaws.com
+    github-production-user-asset-6210df.s3.amazonaws.com
+    *.rel.tunnels.api.visualstudio.com wss://*.rel.tunnels.api.visualstudio.com
+    github.githubassets.com objects-origin.githubusercontent.com
+    copilot-proxy.githubusercontent.com proxy.individual.githubcopilot.com
+    proxy.business.githubcopilot.com proxy.enterprise.githubcopilot.com
+    *.actions.githubusercontent.com wss://*.actions.githubusercontent.com
+    productionresultssa0.blob.core.windows.net
+    productionresultssa1.blob.core.windows.net
+    productionresultssa2.blob.core.windows.net
+    productionresultssa3.blob.core.windows.net
+    productionresultssa4.blob.core.windows.net
+    productionresultssa5.blob.core.windows.net
+    productionresultssa6.blob.core.windows.net
+    productionresultssa7.blob.core.windows.net
+    productionresultssa8.blob.core.windows.net
+    productionresultssa9.blob.core.windows.net
+    productionresultssa10.blob.core.windows.net
+    productionresultssa11.blob.core.windows.net
+    productionresultssa12.blob.core.windows.net
+    productionresultssa13.blob.core.windows.net
+    productionresultssa14.blob.core.windows.net
+    productionresultssa15.blob.core.windows.net
+    productionresultssa16.blob.core.windows.net
+    productionresultssa17.blob.core.windows.net
+    productionresultssa18.blob.core.windows.net
+    productionresultssa19.blob.core.windows.net
+    github-production-repository-image-32fea6.s3.amazonaws.com
+    github-production-release-asset-2e65be.s3.amazonaws.com insights.github.com
+    wss://alive.github.com wss://alive-staging.github.com api.githubcopilot.com
+    api.individual.githubcopilot.com api.business.githubcopilot.com
+    api.enterprise.githubcopilot.com; font-src github.githubassets.com;
+    form-action 'self' github.com gist.github.com
+    copilot-workspace.githubnext.com objects-origin.githubusercontent.com;
+    frame-ancestors 'none'; frame-src viewscreen.githubusercontent.com
+    notebooks.githubusercontent.com; img-src 'self' data: blob:
+    github.githubassets.com media.githubusercontent.com
+    camo.githubusercontent.com identicons.github.com
+    avatars.githubusercontent.com private-avatars.githubusercontent.com
+    github-cloud.s3.amazonaws.com objects.githubusercontent.com
+    release-assets.githubusercontent.com
+    secured-user-images.githubusercontent.com user-images.githubusercontent.com
+    private-user-images.githubusercontent.com opengraph.githubassets.com
+    marketplace-screenshots.githubusercontent.com
+    copilotprodattachments.blob.core.windows.net/github-production-copilot-attachments/
+    github-production-user-asset-6210df.s3.amazonaws.com
+    customer-stories-feed.github.com spotlights-feed.github.com
+    objects-origin.githubusercontent.com *.githubusercontent.com; manifest-src
+    'self'; media-src github.com user-images.githubusercontent.com
+    secured-user-images.githubusercontent.com
+    private-user-images.githubusercontent.com
+    github-production-user-asset-6210df.s3.amazonaws.com gist.github.com
+    github.githubassets.com; script-src github.githubassets.com; style-src
+    'unsafe-inline' github.githubassets.com; upgrade-insecure-requests;
+    worker-src github.githubassets.com github.com/assets-cdn/worker/
+    github.com/assets/ gist.github.com/assets-cdn/worker/
+  
+    server: github.com
+  
+    x-github-request-id: 9B56:3527E:2101B2A:238C633:69C9AD79
+  
+    Ignoring the response-body
+  
+    setting size while ignoring
+  
+    
+  
+    Connection #0 to host github.com:443 left intact
+  
+    Issue another request to this URL:
+    'https://codeload.github.com/cpp-pm/hunter/tar.gz/v0.24.28'
+  
+    timeout on name lookup is not supported
+  
+    Host codeload.github.com:443 was resolved.
+  
+    IPv6: (none)
+  
+    IPv4: 20.26.156.216
+  
+      Trying 20.26.156.216:443...
+  
+    schannel: disabled automatic use of client certificate
+  
+    ALPN: curl offers h2,http/1.1
+  
+    ALPN: server accepted h2
+  
+    Established connection to codeload.github.com (20.26.156.216 port 443) from
+    10.7.0.2 port 51911
+  
+    using HTTP/2
+  
+    [HTTP/2] [1] OPENED stream for
+    https://codeload.github.com/cpp-pm/hunter/tar.gz/v0.24.28
+  
+    [HTTP/2] [1] [:method: GET]
+  
+    [HTTP/2] [1] [:scheme: https]
+  
+    [HTTP/2] [1] [:authority: codeload.github.com]
+  
+    [HTTP/2] [1] [:path: /cpp-pm/hunter/tar.gz/v0.24.28]
+  
+    [HTTP/2] [1] [user-agent: curl/8.18.0]
+  
+    [HTTP/2] [1] [accept: */*]
+  
+    GET /cpp-pm/hunter/tar.gz/v0.24.28 HTTP/2
+  
+    Host: codeload.github.com
+  
+    User-Agent: curl/8.18.0
+  
+    Accept: */*
+  
+    
+  
+    Request completely sent off
+  
+    schannel: remote party requests renegotiation
+  
+    schannel: renegotiating SSL/TLS connection
+  
+    schannel: SSL/TLS connection renegotiated
+  
+    schannel: remote party requests renegotiation
+  
+    schannel: renegotiating SSL/TLS connection
+  
+    schannel: SSL/TLS connection renegotiated
+  
+    HTTP/2 404 
+  
+    access-control-allow-origin: https://render.githubusercontent.com
+  
+    content-security-policy: default-src 'none'; style-src 'unsafe-inline';
+    sandbox
+  
+    cross-origin-resource-policy: cross-origin
+  
+    strict-transport-security: max-age=31536000
+  
+    vary: Authorization,Accept-Encoding
+  
+    x-content-type-options: nosniff
+  
+    x-frame-options: deny
+  
+    x-xss-protection: 1; mode=block
+  
+    date: Sun, 29 Mar 2026 22:53:46 GMT
+  
+    content-length: 14
+  
+    content-type: text/plain; charset=utf-8
+  
+    x-github-request-id: 9240:18DC65:46618:224577:69C9AD7A
+  
+CUSTOMBUILD : The requested URL returned error : 404 [C:\.hunter\_Base\Download\Hunter\0.24.28\1d3c0fb\Build\Hunter.vcxproj]
+  
+    
+  
+    Connection #1 to host codeload.github.com:443 left intact
+  
+  
+  
+            --- LOG END ---
+            
+      
+  
+  
+C:\Program Files\Microsoft Visual Studio\2022\Professional\MSBuild\Microsoft\VC\v170\Microsoft.CppCommon.targets(254,5): error MSB8066: Custom build for 'C:\.hunter\_Base\Download\Hunter\0.24.28\1d3c0fb\Build\CMakeFiles\5ddc5ffae793795ecc9d0972f66a85a1\Hunter-mkdir.rule;C:\.hunter\_Base\Download\Hunter\0.24.28\1d3c0fb\Build\CMakeFiles\5ddc5ffae793795ecc9d0972f66a85a1\Hunter-download.rule;C:\.hunter\_Base\Download\Hunter\0.24.28\1d3c0fb\Build\CMakeFiles\5ddc5ffae793795ecc9d0972f66a85a1\Hunter-update.rule;C:\.hunter\_Base\Download\Hunter\0.24.28\1d3c0fb\Build\CMakeFiles\5ddc5ffae793795ecc9d0972f66a85a1\Hunter-patch.rule;C:\.hunter\_Base\Download\Hunter\0.24.28\1d3c0fb\Build\CMakeFiles\5ddc5ffae793795ecc9d0972f66a85a1\Hunter-configure.rule;C:\.hunter\_Base\Download\Hunter\0.24.28\1d3c0fb\Build\CMakeFiles\5ddc5ffae793795ecc9d0972f66a85a1\Hunter-build.rule;C:\.hunter\_Base\Download\Hunter\0.24.28\1d3c0fb\Build\CMakeFiles\5ddc5ffae793795ecc9d0972f66a85a1\Hunter-install.rule;C:\.hunter\_Base\Download\Hunter\0.24.28\1d3c0fb\Build\CMakeFiles\749c6fd7d15fc8c2e52b868206310cf1\Hunter-complete.rule;C:\.hunter\_Base\Download\Hunter\0.24.28\1d3c0fb\Build\CMakeFiles\b78a4bf879a12b2f944aee1c49ffa73c\Hunter.rule;C:\.hunter\_Base\Download\Hunter\0.24.28\1d3c0fb\CMakeLists.txt' exited with code 1. [C:\.hunter\_Base\Download\Hunter\0.24.28\1d3c0fb\Build\Hunter.vcxproj]
+
+[hunter ** INTERNAL **] 
+Build project failed
+[hunter ** INTERNAL **] [Di
+rectory:C:/Users/wonfi/Docu
+ments/bquai/apps/quai-gpu-m
+iner]
+
+---------------------------
+--- ERROR -----------------
+-------------
+    https://docs.hunter.sh/
+en/latest/reference/errors/
+error.internal.html
+---------------------------
+---------------------------
+-------------
+
+CMake Error at cmake/cable/
+HunterGate.cmake:87 
+(message):
+Call Stack (most recent 
+call first):
+  cmake/cable/HunterGate.cm
+ake:97 
+(hunter_gate_error_page)
+  cmake/cable/HunterGate.cm
+ake:342 (hunter_gate_intern
+al_error)
+  cmake/cable/HunterGate.cm
+ake:500 
+(hunter_gate_download)
+  CMakeLists.txt:25 
+(HunterGate)
+
+
+-- Configuring incomplete, errors occurred!

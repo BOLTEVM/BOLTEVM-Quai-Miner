@@ -1,0 +1,6 @@
+
+> miner-ui@0.1.0 dev C:\Users\wonfi\Documents\bquai\apps\miner-ui
+> next dev -p 8080 --webpack
+
+error: unknown option '--webpack'
+ ELIFECYCLE  Command failed with exit code 1.

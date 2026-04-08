@@ -1,0 +1,193 @@
+﻿cmake : CMake Deprecation 
+Warning at 
+CMakeLists.txt:1 
+(cmake_minimum_required):
+At line:1 char:1
++ cmake -A x64 -G "Visual 
+Studio 17 2022" -S 
+apps/quai-gpu-miner -B app 
+...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~
+    + CategoryInfo         
+     : NotSpecified: (CMa  
+  ke Deprecati...imum_re   
+ quired)::String) [], R    
+emoteException
+    + FullyQualifiedErrorI 
+   d : NativeCommandError
+ 
+  Compatibility with CMake 
+< 3.10 will be removed 
+from a future version of
+  CMake.
+
+  Update the VERSION 
+argument <min> value.  Or, 
+use the <min>...<max> 
+syntax
+  to tell CMake that the 
+project requires at least 
+<min> but has been updated
+  to work with policies 
+introduced by <max> or 
+earlier.
+
+
+-- [cable ] Cable 0.5.0 initialized
+CMake Warning (dev) at 
+C:/Program Files/CMake/shar
+e/cmake-4.3/Modules/GNUInst
+allDirs.cmake:455 
+(message):
+  Unable to determine 
+default 
+CMAKE_INSTALL_LIBDIR 
+directory because no
+  target architecture is 
+known.  Please enable at 
+least one language before
+  including GNUInstallDirs.
+Call Stack (most recent 
+call first):
+  C:/Program Files/CMake/sh
+are/cmake-4.3/Modules/GNUIn
+stallDirs.cmake:287 (_GNUIn
+stallDirs_LIBDIR_get_defaul
+t)
+  C:/Program Files/CMake/sh
+are/cmake-4.3/Modules/GNUIn
+stallDirs.cmake:287 
+(cmake_language)
+  C:/Program Files/CMake/sh
+are/cmake-4.3/Modules/GNUIn
+stallDirs.cmake:547 (_GNUIn
+stallDirs_cache_path)
+  cmake/cable/CableBuildInf
+o.cmake:16 (include)
+  CMakeLists.txt:5 
+(include)
+This warning is for 
+project developers.  Use 
+-Wno-dev to suppress it.
+
+CMake Warning (dev) at 
+C:/Program Files/CMake/shar
+e/cmake-4.3/Modules/GNUInst
+allDirs.cmake:455 
+(message):
+  Unable to determine 
+default 
+CMAKE_INSTALL_LIBDIR 
+directory because no
+  target architecture is 
+known.  Please enable at 
+least one language before
+  including GNUInstallDirs.
+Call Stack (most recent 
+call first):
+  C:/Program Files/CMake/sh
+are/cmake-4.3/Modules/GNUIn
+stallDirs.cmake:298 (_GNUIn
+stallDirs_LIBDIR_get_defaul
+t)
+  C:/Program Files/CMake/sh
+are/cmake-4.3/Modules/GNUIn
+stallDirs.cmake:298 
+(cmake_language)
+  C:/Program Files/CMake/sh
+are/cmake-4.3/Modules/GNUIn
+stallDirs.cmake:547 (_GNUIn
+stallDirs_cache_path)
+  cmake/cable/CableBuildInf
+o.cmake:16 (include)
+  CMakeLists.txt:5 
+(include)
+This warning is for 
+project developers.  Use 
+-Wno-dev to suppress it.
+
+-- [hunter *** DEBUG *** 2026-03-29T17:33:45] HUNTER_ROOT set using SYSTEMDRIVE environment variable
+-- [hunter *** DEBUG *** 2026-03-29T17:33:45] HUNTER_ROOT: C:/.hunter
+-- [hunter *** DEBUG *** 2026-03-29T17:33:45] Locking directory: C:/.hunter/_Base/Download/Hunter/0.24.28/1d3c0fb
+-- [hunter *** DEBUG *** 2026-03-29T17:33:45] Lock done
+-- [hunter *** DEBUG *** 2026-03-29T17:33:45] Run generate
+CMake Error at 
+CMakeLists.txt:1 
+(cmake_minimum_required):
+  Compatibility with CMake 
+< 3.5 has been removed 
+from CMake.
+
+  Update the VERSION 
+argument <min> value.  Or, 
+use the <min>...<max> 
+syntax
+  to tell CMake that the 
+project requires at least 
+<min> but has been updated
+  to work with policies 
+introduced by <max> or 
+earlier.
+
+  Or, add -DCMAKE_POLICY_VE
+RSION_MINIMUM=3.5 to try 
+configuring anyway.
+
+
+-- Configuring incomplete, errors occurred!
+
+[hunter ** INTERNAL **] 
+Configure project failed.
+[hunter ** INTERNAL **] To 
+reproduce the error run: 
+C:/Program 
+Files/CMake/bin/cmake.exe -
+HC:/.hunter/_Base/Download/
+Hunter/0.24.28/1d3c0fb -BC:
+/.hunter/_Base/Download/Hun
+ter/0.24.28/1d3c0fb/Build 
+-GVisual Studio 17 2022 -DC
+MAKE_TOOLCHAIN_FILE=C:/User
+s/wonfi/Documents/bquai/app
+s/quai-gpu-miner/cmake/cabl
+e/toolchains/cxx11.cmake 
+[hunter ** INTERNAL **] In 
+directory C:/.hunter/_Base/
+Download/Hunter/0.24.28/1d3
+c0fb
+[hunter ** INTERNAL **] [Di
+rectory:C:/Users/wonfi/Docu
+ments/bquai/apps/quai-gpu-m
+iner]
+
+---------------------------
+--- ERROR -----------------
+-------------
+    https://docs.hunter.sh/
+en/latest/reference/errors/
+error.internal.html
+---------------------------
+---------------------------
+-------------
+
+CMake Error at cmake/cable/
+HunterGate.cmake:87 
+(message):
+Call Stack (most recent 
+call first):
+  cmake/cable/HunterGate.cm
+ake:97 
+(hunter_gate_error_page)
+  cmake/cable/HunterGate.cm
+ake:321 (hunter_gate_intern
+al_error)
+  cmake/cable/HunterGate.cm
+ake:499 
+(hunter_gate_download)
+  CMakeLists.txt:25 
+(HunterGate)
+
+
+-- Configuring incomplete, errors occurred!

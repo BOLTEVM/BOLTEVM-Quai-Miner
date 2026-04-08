@@ -1,0 +1,917 @@
+﻿cmake : CMake 
+Deprecation Warning at 
+CMakeLists.txt:1 (cmake_
+minimum_required):
+At line:1 char:1
++ cmake -S 
+apps/quai-gpu-miner -B a
+pps/quai-gpu-miner/build
+ -G "Visual  ...
++ ~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo      
+        : NotSpecified: 
+(CMa    ke 
+Deprecati...imum_re    
+quired)::String) [], R  
+  emoteException
+    + 
+FullyQualifiedErrorI    
+d : NativeCommandError
+ 
+  Compatibility with 
+CMake < 3.10 will be 
+removed from a future 
+version of
+  CMake.
+
+  Update the VERSION 
+argument <min> value.  
+Or, use the 
+<min>...<max> syntax
+  to tell CMake that 
+the project requires at 
+least <min> but has 
+been updated
+  to work with policies 
+introduced by <max> or 
+earlier.
+
+
+-- [cable ] Cable 0.5.0 initialized
+CMake Warning (dev) at 
+C:/Program Files/CMake/s
+hare/cmake-4.3/Modules/G
+NUInstallDirs.cmake:455 
+(message):
+  Unable to determine 
+default 
+CMAKE_INSTALL_LIBDIR 
+directory because no
+  target architecture 
+is known.  Please 
+enable at least one 
+language before
+  including 
+GNUInstallDirs.
+Call Stack (most recent 
+call first):
+  C:/Program Files/CMake
+/share/cmake-4.3/Modules
+/GNUInstallDirs.cmake:28
+7 (_GNUInstallDirs_LIBDI
+R_get_default)
+  C:/Program Files/CMake
+/share/cmake-4.3/Modules
+/GNUInstallDirs.cmake:28
+7 (cmake_language)
+  C:/Program Files/CMake
+/share/cmake-4.3/Modules
+/GNUInstallDirs.cmake:54
+7 (_GNUInstallDirs_cache
+_path)
+  cmake/cable/CableBuild
+Info.cmake:16 (include)
+  CMakeLists.txt:5 
+(include)
+This warning is for 
+project developers.  
+Use -Wno-dev to 
+suppress it.
+
+CMake Warning (dev) at 
+C:/Program Files/CMake/s
+hare/cmake-4.3/Modules/G
+NUInstallDirs.cmake:455 
+(message):
+  Unable to determine 
+default 
+CMAKE_INSTALL_LIBDIR 
+directory because no
+  target architecture 
+is known.  Please 
+enable at least one 
+language before
+  including 
+GNUInstallDirs.
+Call Stack (most recent 
+call first):
+  C:/Program Files/CMake
+/share/cmake-4.3/Modules
+/GNUInstallDirs.cmake:29
+8 (_GNUInstallDirs_LIBDI
+R_get_default)
+  C:/Program Files/CMake
+/share/cmake-4.3/Modules
+/GNUInstallDirs.cmake:29
+8 (cmake_language)
+  C:/Program Files/CMake
+/share/cmake-4.3/Modules
+/GNUInstallDirs.cmake:54
+7 (_GNUInstallDirs_cache
+_path)
+  cmake/cable/CableBuild
+Info.cmake:16 (include)
+  CMakeLists.txt:5 
+(include)
+This warning is for 
+project developers.  
+Use -Wno-dev to 
+suppress it.
+
+-- [hunter *** DEBUG *** 2026-03-29T19:11:52] HUNTER_ROOT set using SYSTEMDRIVE environment variable
+-- [hunter *** DEBUG *** 2026-03-29T19:11:52] HUNTER_ROOT: C:/.hunter
+CMake Deprecation 
+Warning at C:/.hunter/_B
+ase/Download/Hunter/0.23
+.214/e14bc15/Unpacked/cm
+ake/modules/hunter_apply
+_gate_settings.cmake:4 (
+cmake_minimum_required):
+  Compatibility with 
+CMake < 3.10 will be 
+removed from a future 
+version of
+  CMake.
+
+  Update the VERSION 
+argument <min> value.  
+Or, use the 
+<min>...<max> syntax
+  to tell CMake that 
+the project requires at 
+least <min> but has 
+been updated
+  to work with policies 
+introduced by <max> or 
+earlier.
+Call Stack (most recent 
+call first):
+  C:/.hunter/_Base/Downl
+oad/Hunter/0.23.214/e14b
+c15/Unpacked/cmake/modul
+es/hunter_finalize.cmake
+:5 (include)
+  C:/.hunter/_Base/Downl
+oad/Hunter/0.23.214/e14b
+c15/Unpacked/cmake/modul
+es/hunter_add_package.cm
+ake:7 (include)
+  C:/.hunter/_Base/Downl
+oad/Hunter/0.23.214/e14b
+c15/Unpacked/cmake/Hunte
+r:34 (include)
+  cmake/cable/HunterGate
+.cmake:526 (include)
+  CMakeLists.txt:25 
+(HunterGate)
+
+
+CMake Deprecation 
+Warning at C:/.hunter/_B
+ase/Download/Hunter/0.23
+.214/e14bc15/Unpacked/cm
+ake/modules/hunter_calcu
+late_config_sha1.cmake:4
+ (cmake_minimum_required
+):
+  Compatibility with 
+CMake < 3.10 will be 
+removed from a future 
+version of
+  CMake.
+
+  Update the VERSION 
+argument <min> value.  
+Or, use the 
+<min>...<max> syntax
+  to tell CMake that 
+the project requires at 
+least <min> but has 
+been updated
+  to work with policies 
+introduced by <max> or 
+earlier.
+Call Stack (most recent 
+call first):
+  C:/.hunter/_Base/Downl
+oad/Hunter/0.23.214/e14b
+c15/Unpacked/cmake/modul
+es/hunter_apply_gate_set
+tings.cmake:8 (include)
+  C:/.hunter/_Base/Downl
+oad/Hunter/0.23.214/e14b
+c15/Unpacked/cmake/modul
+es/hunter_finalize.cmake
+:5 (include)
+  C:/.hunter/_Base/Downl
+oad/Hunter/0.23.214/e14b
+c15/Unpacked/cmake/modul
+es/hunter_add_package.cm
+ake:7 (include)
+  C:/.hunter/_Base/Downl
+oad/Hunter/0.23.214/e14b
+c15/Unpacked/cmake/Hunte
+r:34 (include)
+  cmake/cable/HunterGate
+.cmake:526 (include)
+  CMakeLists.txt:25 
+(HunterGate)
+
+
+CMake Deprecation 
+Warning at C:/.hunter/_B
+ase/Download/Hunter/0.23
+.214/e14bc15/Unpacked/cm
+ake/modules/hunter_lock_
+directory.cmake:4 (cmake
+_minimum_required):
+  Compatibility with 
+CMake < 3.10 will be 
+removed from a future 
+version of
+  CMake.
+
+  Update the VERSION 
+argument <min> value.  
+Or, use the 
+<min>...<max> syntax
+  to tell CMake that 
+the project requires at 
+least <min> but has 
+been updated
+  to work with policies 
+introduced by <max> or 
+earlier.
+Call Stack (most recent 
+call first):
+  C:/.hunter/_Base/Downl
+oad/Hunter/0.23.214/e14b
+c15/Unpacked/cmake/modul
+es/hunter_calculate_conf
+ig_sha1.cmake:9 
+(include)
+  C:/.hunter/_Base/Downl
+oad/Hunter/0.23.214/e14b
+c15/Unpacked/cmake/modul
+es/hunter_apply_gate_set
+tings.cmake:8 (include)
+  C:/.hunter/_Base/Downl
+oad/Hunter/0.23.214/e14b
+c15/Unpacked/cmake/modul
+es/hunter_finalize.cmake
+:5 (include)
+  C:/.hunter/_Base/Downl
+oad/Hunter/0.23.214/e14b
+c15/Unpacked/cmake/modul
+es/hunter_add_package.cm
+ake:7 (include)
+  C:/.hunter/_Base/Downl
+oad/Hunter/0.23.214/e14b
+c15/Unpacked/cmake/Hunte
+r:34 (include)
+  cmake/cable/HunterGate
+.cmake:526 (include)
+  CMakeLists.txt:25 
+(HunterGate)
+
+
+CMake Deprecation 
+Warning at C:/.hunter/_B
+ase/Download/Hunter/0.23
+.214/e14bc15/Unpacked/cm
+ake/modules/hunter_make_
+directory.cmake:4 (cmake
+_minimum_required):
+  Compatibility with 
+CMake < 3.10 will be 
+removed from a future 
+version of
+  CMake.
+
+  Update the VERSION 
+argument <min> value.  
+Or, use the 
+<min>...<max> syntax
+  to tell CMake that 
+the project requires at 
+least <min> but has 
+been updated
+  to work with policies 
+introduced by <max> or 
+earlier.
+Call Stack (most recent 
+call first):
+  C:/.hunter/_Base/Downl
+oad/Hunter/0.23.214/e14b
+c15/Unpacked/cmake/modul
+es/hunter_calculate_conf
+ig_sha1.cmake:10 
+(include)
+  C:/.hunter/_Base/Downl
+oad/Hunter/0.23.214/e14b
+c15/Unpacked/cmake/modul
+es/hunter_apply_gate_set
+tings.cmake:8 (include)
+  C:/.hunter/_Base/Downl
+oad/Hunter/0.23.214/e14b
+c15/Unpacked/cmake/modul
+es/hunter_finalize.cmake
+:5 (include)
+  C:/.hunter/_Base/Downl
+oad/Hunter/0.23.214/e14b
+c15/Unpacked/cmake/modul
+es/hunter_add_package.cm
+ake:7 (include)
+  C:/.hunter/_Base/Downl
+oad/Hunter/0.23.214/e14b
+c15/Unpacked/cmake/Hunte
+r:34 (include)
+  cmake/cable/HunterGate
+.cmake:526 (include)
+  CMakeLists.txt:25 
+(HunterGate)
+
+
+CMake Deprecation 
+Warning at C:/.hunter/_B
+ase/Download/Hunter/0.23
+.214/e14bc15/Unpacked/cm
+ake/modules/hunter_lock_
+directory.cmake:4 (cmake
+_minimum_required):
+  Compatibility with 
+CMake < 3.10 will be 
+removed from a future 
+version of
+  CMake.
+
+  Update the VERSION 
+argument <min> value.  
+Or, use the 
+<min>...<max> syntax
+  to tell CMake that 
+the project requires at 
+least <min> but has 
+been updated
+  to work with policies 
+introduced by <max> or 
+earlier.
+Call Stack (most recent 
+call first):
+  C:/.hunter/_Base/Downl
+oad/Hunter/0.23.214/e14b
+c15/Unpacked/cmake/modul
+es/hunter_make_directory
+.cmake:7 (include)
+  C:/.hunter/_Base/Downl
+oad/Hunter/0.23.214/e14b
+c15/Unpacked/cmake/modul
+es/hunter_calculate_conf
+ig_sha1.cmake:10 
+(include)
+  C:/.hunter/_Base/Downl
+oad/Hunter/0.23.214/e14b
+c15/Unpacked/cmake/modul
+es/hunter_apply_gate_set
+tings.cmake:8 (include)
+  C:/.hunter/_Base/Downl
+oad/Hunter/0.23.214/e14b
+c15/Unpacked/cmake/modul
+es/hunter_finalize.cmake
+:5 (include)
+  C:/.hunter/_Base/Downl
+oad/Hunter/0.23.214/e14b
+c15/Unpacked/cmake/modul
+es/hunter_add_package.cm
+ake:7 (include)
+  C:/.hunter/_Base/Downl
+oad/Hunter/0.23.214/e14b
+c15/Unpacked/cmake/Hunte
+r:34 (include)
+  cmake/cable/HunterGate
+.cmake:526 (include)
+  CMakeLists.txt:25 
+(HunterGate)
+
+
+CMake Deprecation 
+Warning at C:/.hunter/_B
+ase/Download/Hunter/0.23
+.214/e14bc15/Unpacked/cm
+ake/modules/hunter_calcu
+late_self.cmake:4 (cmake
+_minimum_required):
+  Compatibility with 
+CMake < 3.10 will be 
+removed from a future 
+version of
+  CMake.
+
+  Update the VERSION 
+argument <min> value.  
+Or, use the 
+<min>...<max> syntax
+  to tell CMake that 
+the project requires at 
+least <min> but has 
+been updated
+  to work with policies 
+introduced by <max> or 
+earlier.
+Call Stack (most recent 
+call first):
+  C:/.hunter/_Base/Downl
+oad/Hunter/0.23.214/e14b
+c15/Unpacked/cmake/modul
+es/hunter_apply_gate_set
+tings.cmake:9 (include)
+  C:/.hunter/_Base/Downl
+oad/Hunter/0.23.214/e14b
+c15/Unpacked/cmake/modul
+es/hunter_finalize.cmake
+:5 (include)
+  C:/.hunter/_Base/Downl
+oad/Hunter/0.23.214/e14b
+c15/Unpacked/cmake/modul
+es/hunter_add_package.cm
+ake:7 (include)
+  C:/.hunter/_Base/Downl
+oad/Hunter/0.23.214/e14b
+c15/Unpacked/cmake/Hunte
+r:34 (include)
+  cmake/cable/HunterGate
+.cmake:526 (include)
+  CMakeLists.txt:25 
+(HunterGate)
+
+
+CMake Deprecation 
+Warning at C:/.hunter/_B
+ase/Download/Hunter/0.23
+.214/e14bc15/Unpacked/cm
+ake/modules/hunter_lock_
+directory.cmake:4 (cmake
+_minimum_required):
+  Compatibility with 
+CMake < 3.10 will be 
+removed from a future 
+version of
+  CMake.
+
+  Update the VERSION 
+argument <min> value.  
+Or, use the 
+<min>...<max> syntax
+  to tell CMake that 
+the project requires at 
+least <min> but has 
+been updated
+  to work with policies 
+introduced by <max> or 
+earlier.
+Call Stack (most recent 
+call first):
+  C:/.hunter/_Base/Downl
+oad/Hunter/0.23.214/e14b
+c15/Unpacked/cmake/modul
+es/hunter_calculate_tool
+chain_sha1.cmake:5 
+(include)
+  C:/.hunter/_Base/Downl
+oad/Hunter/0.23.214/e14b
+c15/Unpacked/cmake/modul
+es/hunter_apply_gate_set
+tings.cmake:10 (include)
+  C:/.hunter/_Base/Downl
+oad/Hunter/0.23.214/e14b
+c15/Unpacked/cmake/modul
+es/hunter_finalize.cmake
+:5 (include)
+  C:/.hunter/_Base/Downl
+oad/Hunter/0.23.214/e14b
+c15/Unpacked/cmake/modul
+es/hunter_add_package.cm
+ake:7 (include)
+  C:/.hunter/_Base/Downl
+oad/Hunter/0.23.214/e14b
+c15/Unpacked/cmake/Hunte
+r:34 (include)
+  cmake/cable/HunterGate
+.cmake:526 (include)
+  CMakeLists.txt:25 
+(HunterGate)
+
+
+CMake Deprecation 
+Warning at C:/.hunter/_B
+ase/Download/Hunter/0.23
+.214/e14bc15/Unpacked/cm
+ake/modules/hunter_make_
+directory.cmake:4 (cmake
+_minimum_required):
+  Compatibility with 
+CMake < 3.10 will be 
+removed from a future 
+version of
+  CMake.
+
+  Update the VERSION 
+argument <min> value.  
+Or, use the 
+<min>...<max> syntax
+  to tell CMake that 
+the project requires at 
+least <min> but has 
+been updated
+  to work with policies 
+introduced by <max> or 
+earlier.
+Call Stack (most recent 
+call first):
+  C:/.hunter/_Base/Downl
+oad/Hunter/0.23.214/e14b
+c15/Unpacked/cmake/modul
+es/hunter_calculate_tool
+chain_sha1.cmake:6 
+(include)
+  C:/.hunter/_Base/Downl
+oad/Hunter/0.23.214/e14b
+c15/Unpacked/cmake/modul
+es/hunter_apply_gate_set
+tings.cmake:10 (include)
+  C:/.hunter/_Base/Downl
+oad/Hunter/0.23.214/e14b
+c15/Unpacked/cmake/modul
+es/hunter_finalize.cmake
+:5 (include)
+  C:/.hunter/_Base/Downl
+oad/Hunter/0.23.214/e14b
+c15/Unpacked/cmake/modul
+es/hunter_add_package.cm
+ake:7 (include)
+  C:/.hunter/_Base/Downl
+oad/Hunter/0.23.214/e14b
+c15/Unpacked/cmake/Hunte
+r:34 (include)
+  cmake/cable/HunterGate
+.cmake:526 (include)
+  CMakeLists.txt:25 
+(HunterGate)
+
+
+CMake Deprecation 
+Warning at C:/.hunter/_B
+ase/Download/Hunter/0.23
+.214/e14bc15/Unpacked/cm
+ake/modules/hunter_lock_
+directory.cmake:4 (cmake
+_minimum_required):
+  Compatibility with 
+CMake < 3.10 will be 
+removed from a future 
+version of
+  CMake.
+
+  Update the VERSION 
+argument <min> value.  
+Or, use the 
+<min>...<max> syntax
+  to tell CMake that 
+the project requires at 
+least <min> but has 
+been updated
+  to work with policies 
+introduced by <max> or 
+earlier.
+Call Stack (most recent 
+call first):
+  C:/.hunter/_Base/Downl
+oad/Hunter/0.23.214/e14b
+c15/Unpacked/cmake/modul
+es/hunter_make_directory
+.cmake:7 (include)
+  C:/.hunter/_Base/Downl
+oad/Hunter/0.23.214/e14b
+c15/Unpacked/cmake/modul
+es/hunter_calculate_tool
+chain_sha1.cmake:6 
+(include)
+  C:/.hunter/_Base/Downl
+oad/Hunter/0.23.214/e14b
+c15/Unpacked/cmake/modul
+es/hunter_apply_gate_set
+tings.cmake:10 (include)
+  C:/.hunter/_Base/Downl
+oad/Hunter/0.23.214/e14b
+c15/Unpacked/cmake/modul
+es/hunter_finalize.cmake
+:5 (include)
+  C:/.hunter/_Base/Downl
+oad/Hunter/0.23.214/e14b
+c15/Unpacked/cmake/modul
+es/hunter_add_package.cm
+ake:7 (include)
+  C:/.hunter/_Base/Downl
+oad/Hunter/0.23.214/e14b
+c15/Unpacked/cmake/Hunte
+r:34 (include)
+  cmake/cable/HunterGate
+.cmake:526 (include)
+  CMakeLists.txt:25 
+(HunterGate)
+
+
+CMake Deprecation 
+Warning at C:/.hunter/_B
+ase/Download/Hunter/0.23
+.214/e14bc15/Unpacked/cm
+ake/modules/hunter_set_c
+onfig_location.cmake:4 (
+cmake_minimum_required):
+  Compatibility with 
+CMake < 3.10 will be 
+removed from a future 
+version of
+  CMake.
+
+  Update the VERSION 
+argument <min> value.  
+Or, use the 
+<min>...<max> syntax
+  to tell CMake that 
+the project requires at 
+least <min> but has 
+been updated
+  to work with policies 
+introduced by <max> or 
+earlier.
+Call Stack (most recent 
+call first):
+  C:/.hunter/_Base/Downl
+oad/Hunter/0.23.214/e14b
+c15/Unpacked/cmake/modul
+es/hunter_apply_gate_set
+tings.cmake:13 (include)
+  C:/.hunter/_Base/Downl
+oad/Hunter/0.23.214/e14b
+c15/Unpacked/cmake/modul
+es/hunter_finalize.cmake
+:5 (include)
+  C:/.hunter/_Base/Downl
+oad/Hunter/0.23.214/e14b
+c15/Unpacked/cmake/modul
+es/hunter_add_package.cm
+ake:7 (include)
+  C:/.hunter/_Base/Downl
+oad/Hunter/0.23.214/e14b
+c15/Unpacked/cmake/Hunte
+r:34 (include)
+  cmake/cable/HunterGate
+.cmake:526 (include)
+  CMakeLists.txt:25 
+(HunterGate)
+
+
+CMake Deprecation 
+Warning at C:/.hunter/_B
+ase/Download/Hunter/0.23
+.214/e14bc15/Unpacked/cm
+ake/modules/hunter_calcu
+late_self.cmake:4 (cmake
+_minimum_required):
+  Compatibility with 
+CMake < 3.10 will be 
+removed from a future 
+version of
+  CMake.
+
+  Update the VERSION 
+argument <min> value.  
+Or, use the 
+<min>...<max> syntax
+  to tell CMake that 
+the project requires at 
+least <min> but has 
+been updated
+  to work with policies 
+introduced by <max> or 
+earlier.
+Call Stack (most recent 
+call first):
+  C:/.hunter/_Base/Downl
+oad/Hunter/0.23.214/e14b
+c15/Unpacked/cmake/modul
+es/hunter_finalize.cmake
+:6 (include)
+  C:/.hunter/_Base/Downl
+oad/Hunter/0.23.214/e14b
+c15/Unpacked/cmake/modul
+es/hunter_add_package.cm
+ake:7 (include)
+  C:/.hunter/_Base/Downl
+oad/Hunter/0.23.214/e14b
+c15/Unpacked/cmake/Hunte
+r:34 (include)
+  cmake/cable/HunterGate
+.cmake:526 (include)
+  CMakeLists.txt:25 
+(HunterGate)
+
+
+CMake Deprecation 
+Warning at C:/.hunter/_B
+ase/Download/Hunter/0.23
+.214/e14bc15/Unpacked/cm
+ake/modules/hunter_lock_
+directory.cmake:4 (cmake
+_minimum_required):
+  Compatibility with 
+CMake < 3.10 will be 
+removed from a future 
+version of
+  CMake.
+
+  Update the VERSION 
+argument <min> value.  
+Or, use the 
+<min>...<max> syntax
+  to tell CMake that 
+the project requires at 
+least <min> but has 
+been updated
+  to work with policies 
+introduced by <max> or 
+earlier.
+Call Stack (most recent 
+call first):
+  C:/.hunter/_Base/Downl
+oad/Hunter/0.23.214/e14b
+c15/Unpacked/cmake/modul
+es/hunter_private_data.c
+make:12 (include)
+  C:/.hunter/_Base/Downl
+oad/Hunter/0.23.214/e14b
+c15/Unpacked/cmake/Hunte
+r:35 (include)
+  cmake/cable/HunterGate
+.cmake:526 (include)
+  CMakeLists.txt:25 
+(HunterGate)
+
+
+CMake Deprecation 
+Warning at C:/.hunter/_B
+ase/Download/Hunter/0.23
+.214/e14bc15/Unpacked/cm
+ake/modules/hunter_calcu
+late_self.cmake:4 (cmake
+_minimum_required):
+  Compatibility with 
+CMake < 3.10 will be 
+removed from a future 
+version of
+  CMake.
+
+  Update the VERSION 
+argument <min> value.  
+Or, use the 
+<min>...<max> syntax
+  to tell CMake that 
+the project requires at 
+least <min> but has 
+been updated
+  to work with policies 
+introduced by <max> or 
+earlier.
+Call Stack (most recent 
+call first):
+  C:/.hunter/_Base/Downl
+oad/Hunter/0.23.214/e14b
+c15/Unpacked/cmake/modul
+es/hunter_initialize.cma
+ke:4 (include)
+  C:/.hunter/_Base/Downl
+oad/Hunter/0.23.214/e14b
+c15/Unpacked/cmake/Hunte
+r:36 (include)
+  cmake/cable/HunterGate
+.cmake:526 (include)
+  CMakeLists.txt:25 
+(HunterGate)
+
+
+-- [hunter *** DEBUG *** 2026-03-29T19:11:53] Settings (initialize):
+-- [hunter *** DEBUG *** 2026-03-29T19:11:53]   HunterGate done (NO)
+-- [hunter *** DEBUG *** 2026-03-29T19:11:53]   Cache init (YES)
+-- [hunter *** DEBUG *** 2026-03-29T19:11:53] HUNTER_CONFIGURATION_TYPES changed:
+-- [hunter *** DEBUG *** 2026-03-29T19:11:53]   
+-- [hunter *** DEBUG *** 2026-03-29T19:11:53]   Release
+-- [hunter *** DEBUG *** 2026-03-29T19:11:53] Flushing cache
+-- [hunter *** DEBUG *** 2026-03-29T19:11:53] Removing variable from cache:
+-- [hunter *** DEBUG *** 2026-03-29T19:11:53]   Name = 'CMAKE_FIND_PACKAGE_REDIRECTS_DIR'
+-- [hunter *** DEBUG *** 2026-03-29T19:11:53]   Value = 'C:/Users/wonfi/Documents/bquai/apps/quai-gpu-miner/build/CMakeFiles/pkgRedirects'
+-- Configurations: Release;RelWithDebInfo
+-- Selecting Windows SDK version 10.0.26100.0 to target Windows 10.0.26200.
+-- [hunter *** DEBUG *** 2026-03-29T19:11:53] Multi-configuration generator
+-- [hunter *** DEBUG *** 2026-03-29T19:11:53] List of cache servers:
+-- [hunter *** DEBUG *** 2026-03-29T19:11:53]   * https://github.com/ethereum/hunter-cache
+-- [hunter *** DEBUG *** 2026-03-29T19:11:53]   * https://github.com/ingenue/hunter-cache
+-- [hunter *** DEBUG *** 2026-03-29T19:11:53] Settings (finalize):
+-- [hunter *** DEBUG *** 2026-03-29T19:11:53]   HunterGate done (NO)
+-- [hunter *** DEBUG *** 2026-03-29T19:11:53]   Cache init (NO)
+-- [hunter *** DEBUG *** 2026-03-29T19:11:53] Variables from HunterGate:
+-- [hunter *** DEBUG *** 2026-03-29T19:11:53]   HUNTER_GATE_ROOT: C:/.hunter
+-- [hunter *** DEBUG *** 2026-03-29T19:11:53]   HUNTER_GATE_VERSION: 0.23.214
+-- [hunter *** DEBUG *** 2026-03-29T19:11:53]   HUNTER_GATE_SHA1: e14bc153a7f16d6a5eeec845fb0283c8fad8c358
+-- [hunter] Calculating Toolchain-SHA1
+-- [hunter *** DEBUG *** 2026-03-29T19:11:54] [C:/Users/wonfi/Documents/bquai/apps/quai-gpu-miner/build/_3rdParty/Hunter/toolchain] > "C:/Program Files/CMake/bin/cmake.exe" "-DTOOLCHAIN_INFO_FILE=C:/Users/wonfi/Documents/bquai/apps/quai-gpu-miner/build/_3rdParty/Hunter/toolchain/toolchain.info.NOLF" "-DCMAKE_TOOLCHAIN_FILE=C:/Users/wonfi/Documents/bquai/apps/quai-gpu-miner/cmake/cable/toolchains/cxx11.cmake" "-DHUNTER_SELF=C:/.hunter/_Base/Download/Hunter/0.23.214/e14bc15/Unpacked" "-GVisual Studio 17 2022" "-HC:/Users/wonfi/Documents/bquai/apps/quai-gpu-miner/build/_3rdParty/Hunter/toolchain" "-BC:/Users/wonfi/Documents/bquai/apps/quai-gpu-miner/build/_3rdParty/Hunter/toolchain/_builds" "-DCMAKE_MAKE_PROGRAM=C:/Program Files/Microsoft Visual Studio/2022/Professional/MSBuild/Current/Bin/amd64/MSBuild.exe" "-A" "x64" "-DCMAKE_RELEASE_POSTFIX="
+CMake Error at 
+CMakeLists.txt:1 (cmake_
+minimum_required):
+  Compatibility with 
+CMake < 3.5 has been 
+removed from CMake.
+
+  Update the VERSION 
+argument <min> value.  
+Or, use the 
+<min>...<max> syntax
+  to tell CMake that 
+the project requires at 
+least <min> but has 
+been updated
+  to work with policies 
+introduced by <max> or 
+earlier.
+
+  Or, add -DCMAKE_POLICY
+_VERSION_MINIMUM=3.5 to 
+try configuring anyway.
+
+
+-- Configuring incomplete, errors occurred!
+
+[hunter ** INTERNAL **] 
+Generate failed: exit 
+with code 1
+[hunter ** INTERNAL **] 
+[Directory:C:/Users/wonf
+i/Documents/bquai/apps/q
+uai-gpu-miner]
+
+------------------------
+------ ERROR -----------
+------------------
+    https://docs.hunter.
+sh/en/latest/reference/e
+rrors/error.internal.htm
+l
+------------------------
+------------------------
+------------------
+
+CMake Error at C:/.hunte
+r/_Base/Download/Hunter/
+0.23.214/e14bc15/Unpacke
+d/cmake/modules/hunter_e
+rror_page.cmake:12 
+(message):
+Call Stack (most recent 
+call first):
+  C:/.hunter/_Base/Downl
+oad/Hunter/0.23.214/e14b
+c15/Unpacked/cmake/modul
+es/hunter_internal_error
+.cmake:13 
+(hunter_error_page)
+  C:/.hunter/_Base/Downl
+oad/Hunter/0.23.214/e14b
+c15/Unpacked/cmake/modul
+es/hunter_calculate_tool
+chain_sha1.cmake:110 
+(hunter_internal_error)
+  C:/.hunter/_Base/Downl
+oad/Hunter/0.23.214/e14b
+c15/Unpacked/cmake/modul
+es/hunter_apply_gate_set
+tings.cmake:135 (hunter_
+calculate_toolchain_sha1
+)
+  C:/.hunter/_Base/Downl
+oad/Hunter/0.23.214/e14b
+c15/Unpacked/cmake/modul
+es/hunter_finalize.cmake
+:73 (hunter_apply_gate_s
+ettings)
+  C:/.hunter/_Base/Downl
+oad/Hunter/0.23.214/e14b
+c15/Unpacked/cmake/modul
+es/hunter_add_package.cm
+ake:23 (hunter_finalize)
+  CMakeLists.txt:65 
+(hunter_add_package)
+
+
+-- Configuring incomplete, errors occurred!
