@@ -1,15 +1,29 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Cpu, CheckCircle, Rocket, ShieldCheck, Zap, Database, Terminal, Loader2 } from 'lucide-react';
+import { Cpu, CheckCircle, Rocket, ShieldCheck, Zap, Database, Terminal, Loader2, Globe } from 'lucide-react';
 
 const steps = [
     { id: 1, title: 'Hardware Detection', icon: Cpu },
-    { id: 2, title: 'Mining Profile', icon: Zap },
-    { id: 3, title: 'Optimized Build', icon: Terminal },
-    { id: 4, title: 'Network Sync', icon: ShieldCheck },
-    { id: 5, title: 'Rewards', icon: Database },
-    { id: 6, title: 'Launch', icon: Rocket },
+    { id: 2, title: 'Node & Pool', icon: Globe },
+    { id: 3, title: 'Mining Profile', icon: Zap },
+    { id: 4, title: 'Optimized Build', icon: Terminal },
+    { id: 5, title: 'Network Sync', icon: ShieldCheck },
+    { id: 6, title: 'Rewards', icon: Database },
+    { id: 7, title: 'Launch', icon: Rocket },
+];
+
+const networks = [
+    { id: 'mainnet', name: 'Quai Mainnet', rpc: 'https://rpc.quai.network' },
+    { id: 'colosseum', name: 'Colosseum Testnet', rpc: 'https://rpc.colosseum.quai.network' },
+];
+
+const pools = [
+    { id: 'bolt', name: 'BoltPool', url: 'stratum+tcp://quai.pool.bolt-evm.com:3333', desc: 'Recommended, optimized for BoltEVM.' },
+    { id: 'herominers', name: 'HeroMiners', url: 'stratum+tcp://us.quai.herominers.com:1185', desc: 'High hashrate, global coverage.' },
+    { id: 'k1pool', name: 'K1Pool', url: 'stratum+tcp://us.quaikawpow.k1pool.com:3344', desc: 'Low latency, reliable stratum.' },
+    { id: 'kryptex', name: 'Kryptex', url: 'stratum+tcp://quai-kawpow.kryptex.network:7043', desc: 'User friendly, stable connection.' },
+    { id: 'solo', name: 'Solo (Local Node)', url: 'stratum+tcp://localhost:3333', desc: 'Mine directly to your own local node.' },
 ];
 
 export default function SetupWizard() {
@@ -28,16 +42,21 @@ export default function SetupWizard() {
     const [isCheckingDeps, setIsCheckingDeps] = useState(false);
     const [deps, setDeps] = useState<Array<{ name: string; required: boolean; ok: boolean; version: string | null; hint: string }>>([]);
     const [isRepairing, setIsRepairing] = useState(false);
+    const [selectedNetwork, setSelectedNetwork] = useState('mainnet');
+    const [selectedPool, setSelectedPool] = useState('bolt');
+    const [nodeSetupLogs, setNodeSetupLogs] = useState<string[]>([]);
+    const [isSettingUpNode, setIsSettingUpNode] = useState(false);
+    const [nodeSetupSuccess, setNodeSetupSuccess] = useState(false);
 
-    // Auto-run dep check when user arrives at Step 3
+    // Auto-run dep check when user arrives at Step 4 (Build)
     useEffect(() => {
-        if (currentStep === 3 && depsOk === null && !isCheckingDeps) {
+        if (currentStep === 4 && depsOk === null && !isCheckingDeps) {
             checkDependencies();
         }
     }, [currentStep]);
 
     useEffect(() => {
-        if (currentStep === 4) {
+        if (currentStep === 5) {
             const timer = setInterval(() => {
                 setSyncProgress(prev => {
                     if (prev >= 100) {
@@ -143,6 +162,33 @@ export default function SetupWizard() {
         }
     };
 
+    const runNodeSetup = async () => {
+        setIsSettingUpNode(true);
+        setNodeSetupLogs(['Starting automated node setup for Ubuntu...']);
+        try {
+            const response = await fetch('/api/quai/setup-node', { method: 'POST' });
+            const reader = response.body?.getReader();
+            const decoder = new TextDecoder();
+
+            if (!reader) throw new Error('Failed to start node setup stream');
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                const text = decoder.decode(value);
+                const lines = text.split('\n').filter(l => l.trim());
+                setNodeSetupLogs(prev => [...prev, ...lines].slice(-50));
+
+                if (text.includes('[SUCCESS]')) setNodeSetupSuccess(true);
+            }
+        } catch (error: any) {
+            setNodeSetupLogs(prev => [...prev, `[ERR] ${error.message}`]);
+        } finally {
+            setIsSettingUpNode(false);
+        }
+    };
+
     return (
         <div className="wizard-container">
             <div className="stepper">
@@ -221,6 +267,70 @@ export default function SetupWizard() {
                 )}
 
                 {currentStep === 2 && (
+                    <div className="step-pane animate-in">
+                        <h2>Node & Pool Selection</h2>
+                        <p>Configure your target network and mining pool connection.</p>
+
+                        <div className="selection-split">
+                            <div className="selection-col">
+                                <h3>1. Target Network</h3>
+                                <div className="option-list">
+                                    {networks.map(n => (
+                                        <div key={n.id} className={`option-card ${selectedNetwork === n.id ? 'selected' : ''}`} onClick={() => setSelectedNetwork(n.id)}>
+                                            <Globe size={18} />
+                                            <div>
+                                                <h4>{n.name}</h4>
+                                                <span className="rpc-url">{n.rpc}</span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="selection-col">
+                                <h3>2. Mining Pool</h3>
+                                <div className="option-list pool-list">
+                                    {pools.map(p => (
+                                        <div key={p.id} className={`option-card ${selectedPool === p.id ? 'selected' : ''}`} onClick={() => setSelectedPool(p.id)}>
+                                            <div>
+                                                <h4>{p.name}</h4>
+                                                <p className="pool-desc">{p.desc}</p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+
+                        {selectedPool === 'solo' && (
+                            <div className="node-setup-box glass-card animate-in">
+                                <div className="setup-header">
+                                    <Terminal size={16} />
+                                    <span>Local Node Toolchain (Ubuntu)</span>
+                                </div>
+                                {nodeSetupLogs.length > 0 && (
+                                    <div className="mini-terminal">
+                                        {nodeSetupLogs.map((l, i) => <div key={i} className="log-line">{l}</div>)}
+                                    </div>
+                                )}
+                                {!nodeSetupSuccess ? (
+                                    <button className="btn-primary" onClick={runNodeSetup} disabled={isSettingUpNode}>
+                                        {isSettingUpNode ? 'Initializing Node Build...' : 'Auto-Install Quai Node (Ubuntu)'}
+                                    </button>
+                                ) : (
+                                    <div className="status-success">✓ Local Node Ready</div>
+                                )}
+                            </div>
+                        )}
+
+                        <div className="actions">
+                            <button className="btn-ghost" onClick={prevStep}>Back</button>
+                            <button className="btn-primary" onClick={nextStep}>Confirm Configuration</button>
+                        </div>
+                    </div>
+                )}
+
+                {currentStep === 3 && (
                     <div className="step-pane animate-in">
                         <h2>Select Mining Profile</h2>
                         <p>Choose an optimization set based on your requirements.</p>
@@ -338,10 +448,10 @@ export default function SetupWizard() {
                     </div>
                 )}
 
-                {currentStep === 4 && (
+                {currentStep === 5 && (
                     <div className="step-pane animate-in">
                         <h2>Network Synchronization</h2>
-                        <p>Connecting to BoltEVM Quai Stratum nodes...</p>
+                        <p>Connecting to {networks.find(n => n.id === selectedNetwork)?.name} Stratum nodes...</p>
                         <div className="sync-progress">
                             <div className="progress-bar">
                                 <div className="progress-fill" style={{ width: `${syncProgress}%` }}></div>
@@ -357,7 +467,7 @@ export default function SetupWizard() {
                     </div>
                 )}
 
-                {currentStep === 5 && (
+                {currentStep === 6 && (
                     <div className="step-pane animate-in">
                         <h2>Reward Allocation</h2>
                         <p>Enter your Quai Network address to receive mining rewards.</p>
@@ -392,7 +502,7 @@ export default function SetupWizard() {
                     </div>
                 )}
 
-                {(currentStep === 6) && (
+                {(currentStep === 7) && (
                     <div className="step-pane animate-in center">
                         <div className="success-icon"><Rocket size={48} /></div>
                         <h2>Ready to Launch!</h2>
@@ -407,7 +517,8 @@ export default function SetupWizard() {
                                 <div className="s-row"><span>CPU</span> <span style={{ textAlign: 'right' }}>{cpu?.name}</span></div>
                             )}
                             <div className="s-row"><span>Profile</span> <span className="capitalize">{profile}</span></div>
-                            <div className="s-row"><span>Node</span> <span>Quai Mainnet</span></div>
+                            <div className="s-row"><span>Network</span> <span>{networks.find(n => n.id === selectedNetwork)?.name}</span></div>
+                            <div className="s-row"><span>Pool</span> <span>{pools.find(p => p.id === selectedPool)?.name}</span></div>
                         </div>
                         <button className="btn-primary large" onClick={() => {
                             localStorage.setItem('miner_state', JSON.stringify({
@@ -417,7 +528,10 @@ export default function SetupWizard() {
                                 profile: profile,
                                 gpus: gpus,
                                 cpu: cpu,
-                                optimized: buildSuccess
+                                optimized: buildSuccess,
+                                network: selectedNetwork,
+                                pool: selectedPool,
+                                stratum: pools.find(p => p.id === selectedPool)?.url
                             }));
                             window.location.href = '/';
                         }}>Launch BoltEVM Miner</button>
@@ -507,6 +621,21 @@ export default function SetupWizard() {
         .dep-version { font-size: 11px; color: #50fa7b; font-family: monospace; }
         .dep-hint { font-size: 11px; color: var(--text-secondary); margin-top: 2px; line-height: 1.4; }
         .deps-scanning { display: flex; align-items: center; gap: 10px; padding: 14px 16px; color: var(--text-secondary); font-size: 13px; }
+
+        .selection-split { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-bottom: 32px; }
+        .selection-col h3 { font-size: 14px; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 16px; }
+        .option-list { display: flex; flex-direction: column; gap: 12px; }
+        .option-card { padding: 16px; background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 12px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 16px; }
+        .option-card:hover { border-color: var(--accent-cyan); }
+        .option-card.selected { border-color: var(--accent-cyan); background: rgba(0, 242, 255, 0.1); }
+        .option-card h4 { margin: 0; font-size: 15px; }
+        .rpc-url { font-size: 10px; color: var(--text-secondary); font-family: monospace; }
+        .pool-desc { font-size: 11px; color: var(--text-secondary); line-height: 1.4; margin-top: 4px; }
+        .pool-list { max-height: 300px; overflow-y: auto; padding-right: 8px; }
+
+        .node-setup-box { padding: 24px; margin-top: 24px; border: 1px solid var(--accent-cyan); background: rgba(0, 242, 255, 0.05); }
+        .setup-header { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--accent-cyan); margin-bottom: 16px; text-transform: uppercase; font-weight: 600; }
+        .mini-terminal { height: 120px; overflow-y: auto; background: #000; border-radius: 4px; padding: 12px; font-family: monospace; font-size: 10px; color: #50fa7b; margin-bottom: 16px; border: 1px solid var(--glass-border); }
       `}</style>
         </div>
     );
