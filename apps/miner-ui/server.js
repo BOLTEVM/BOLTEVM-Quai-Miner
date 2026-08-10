@@ -1,10 +1,27 @@
 const { WebSocketServer } = require('ws');
 const { spawn } = require('child_process');
+const path = require('path');
+const fs = require('fs');
 
 const wss = new WebSocketServer({ port: 8081 });
 console.log('Local Middleware WebSocket Server running on port 8081');
 
 let minerProcess = null;
+
+function getMinerExecutablePath() {
+    const candidates = [
+        path.join(__dirname, '..', 'quai-gpu-miner', 'build-vs', 'kawpowminer', 'Release', 'quai-gpu-miner.exe'),
+        path.join(__dirname, '..', 'quai-gpu-miner', 'build-ninja', 'kawpowminer', 'quai-gpu-miner.exe'),
+        path.join(__dirname, '..', 'quai-gpu-miner', 'build', 'kawpowminer', 'quai-gpu-miner.exe'),
+        'quai-gpu-miner'
+    ];
+    for (const cand of candidates) {
+        if (cand === 'quai-gpu-miner' || fs.existsSync(cand)) {
+            return cand;
+        }
+    }
+    return 'quai-gpu-miner';
+}
 
 wss.on('connection', function connection(ws) {
     console.log('Frontend connected to middleware.');
@@ -17,31 +34,46 @@ wss.on('connection', function connection(ws) {
                 const { wallet, mode } = parsed.payload;
                 
                 if (minerProcess) {
-                    minerProcess.kill('SIGINT');
+                    try {
+                        if (process.platform === 'win32') {
+                            spawn('taskkill', ['/pid', minerProcess.pid, '/f', '/t']);
+                        } else {
+                            minerProcess.kill('SIGINT');
+                        }
+                    } catch (e) {}
                 }
 
-                console.log(`Starting quai-gpu-miner globally with wallet: ${wallet}`);
+                const executable = getMinerExecutablePath();
+                console.log(`Starting miner executable (${executable}) with wallet: ${wallet}`);
                 
-                // User requested shipping globally: spawn quai-gpu-miner from PATH
                 const args = ['-P', `stratum+tcp://${wallet}@eu.quai.network:3333`];
                 if (mode === 'cpu') args.push('--cpu');
                 if (mode === 'gpu') args.push('-U'); // Use CUDA only
 
-                minerProcess = spawn('quai-gpu-miner', args);
+                minerProcess = spawn(executable, args);
+
+                minerProcess.on('error', (err) => {
+                    console.error(`Failed to launch miner executable (${executable}):`, err.message);
+                    try {
+                        ws.send(JSON.stringify({
+                            type: 'ERROR',
+                            message: `Failed to launch miner process: ${err.message}`
+                        }));
+                    } catch (e) {}
+                    minerProcess = null;
+                });
 
                 minerProcess.stdout.on('data', (data) => {
                     const out = data.toString();
                     process.stdout.write(out);
                     
-                    // Regex parse pseudo-hashrate or real hashrate
-                    // Example regex adapting standard kawpowminer output
                     const hrMatch = out.match(/Speed:\s+([\d.]+)\s+(M|G)H\/s/i);
                     const blockMatch = out.match(/New job/i) || out.match(/Solution found/i);
 
                     if (hrMatch) {
                         let val = parseFloat(hrMatch[1]);
                         if (hrMatch[2].toUpperCase() === 'G') {
-                            val *= 1000; // Normalise to MH/s
+                            val *= 1000;
                         }
                         
                         ws.send(JSON.stringify({
