@@ -104,7 +104,8 @@ export default function MiningConsole({ onBlockFound, onHashrateUpdate, onShareA
           }
         } else if (type === 'PROGRESS') {
           const formattedHr = hashrate >= 1000 ? `${(hashrate / 1000).toFixed(2)} GH/s` : `${hashrate.toFixed(2)} MH/s`;
-          addLog(`[Telemetry] Speed: ${formattedHr} | Entropy Hash: 0x${lastHash || '...'}`, 'info');
+          const hashDisplay = lastHash ? (lastHash.startsWith('0x') ? lastHash : `0x${lastHash}`) : 'Active';
+          addLog(`[Telemetry] Speed: ${formattedHr} | Status: ${hashDisplay}`, 'info');
           if (onHashrateUpdate) onHashrateUpdate(hashrate);
         } else if (type === 'FOUND_BLOCK') {
           addLog(`REAL Block Solution Accepted! Proof: ${proof ? proof.substring(0, 24) : ''}...`, 'success');

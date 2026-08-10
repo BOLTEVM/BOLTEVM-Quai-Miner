@@ -45,14 +45,22 @@ wss.on('connection', function connection(ws) {
 
                 const executable = getMinerExecutablePath();
                 const targetPool = stratum || 'stratum+tcp://quai.pool.bolt-evm.com:3333';
-                const cleanPoolUrl = targetPool.replace('stratum+tcp://', '');
-                const stratumEndpoint = `stratum+tcp://${wallet || '0x0'}@${cleanPoolUrl}`;
+                const cleanPoolUrl = targetPool.replace(/^(?:stratum\+(?:tcp|ssl|tls):\/\/)?/, '');
+                const payoutWallet = (wallet && wallet.startsWith('0x') && wallet.length >= 42) ? wallet : '0x0000000000000000000000000000000000000000';
+                const stratumEndpoint = `stratum+tcp://${payoutWallet}@${cleanPoolUrl}`;
                 
-                console.log(`Starting miner executable (${executable}) -> ${stratumEndpoint}`);
+                console.log(`Starting miner executable (${executable}) -> ${stratumEndpoint} (mode: ${mode})`);
                 
                 const args = ['-P', stratumEndpoint];
-                if (mode === 'cpu') args.push('--cpu');
-                if (mode === 'gpu') args.push('-U'); // Use CUDA only
+                if (mode === 'cpu') {
+                    args.push('--cpu');
+                } else if (mode === 'gpu') {
+                    args.push('-U', '-G'); // Pass both CUDA and OpenCL flags for maximum GPU hardware support
+                } else if (mode === 'dual') {
+                    args.push('-U', '-G', '--cpu'); // Enable CUDA, OpenCL, and CPU mining pipelines
+                } else {
+                    args.push('-U', '-G');
+                }
 
                 minerProcess = spawn(executable, args);
 
@@ -78,12 +86,15 @@ wss.on('connection', function connection(ws) {
                             if (unitPrefix === 'G') val *= 1000;
                             if (unitPrefix === 'K') val /= 1000;
 
+                            const hashMatch = cleanLine.match(/0x[0-9a-fA-F]{8,64}/) || cleanLine.match(/Job:\s*([0-9a-fA-F]+)/i);
+                            const extractedHash = hashMatch ? (hashMatch[1] || hashMatch[0]) : null;
+
                             try {
                                 ws.send(JSON.stringify({
                                     type: 'PROGRESS',
                                     hashrate: val,
                                     hashes: Math.floor(val * 1e6),
-                                    lastHash: cleanLine.substring(0, 12)
+                                    lastHash: extractedHash
                                 }));
                             } catch (e) {}
                         }
