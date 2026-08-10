@@ -1,6 +1,7 @@
 // miner.worker.ts - Hardware & Web-Fallback Mining Worker
 let ws: WebSocket | null = null;
 let fallbackInterval: any = null;
+let zeroHashrateWatchdog: any = null;
 
 self.onmessage = (e: MessageEvent) => {
     const { type, intensity, wallet, mode, gpus, cpu, profile, stratum } = e.data;
@@ -13,6 +14,10 @@ self.onmessage = (e: MessageEvent) => {
 };
 
 function stopMining() {
+    if (zeroHashrateWatchdog) {
+        clearTimeout(zeroHashrateWatchdog);
+        zeroHashrateWatchdog = null;
+    }
     if (fallbackInterval) {
         clearInterval(fallbackInterval);
         fallbackInterval = null;
@@ -28,6 +33,22 @@ async function startMining(payload: any) {
     stopMining();
 
     let wsConnected = false;
+
+    const armZeroWatchdog = () => {
+        if (zeroHashrateWatchdog) clearTimeout(zeroHashrateWatchdog);
+        zeroHashrateWatchdog = setTimeout(() => {
+            if (!fallbackInterval) {
+                self.postMessage({
+                    type: 'LOG',
+                    message: '[Watchdog] Native miner telemetry stalled at 0.0 MH/s for >5s. Activating Web-Worker fallback engine...',
+                    logType: 'warning'
+                });
+                initFallbackWebMiner(payload);
+            }
+        }, 5000);
+    };
+
+    armZeroWatchdog();
 
     try {
         ws = new WebSocket('ws://localhost:8081');
@@ -49,6 +70,19 @@ async function startMining(payload: any) {
                         initFallbackWebMiner(payload);
                     }
                 }
+
+                if (data.type === 'PROGRESS') {
+                    const hr = Number(data.hashrate) || 0;
+                    if (hr > 0) {
+                        if (zeroHashrateWatchdog) {
+                            clearTimeout(zeroHashrateWatchdog);
+                            zeroHashrateWatchdog = null;
+                        }
+                    } else if (!fallbackInterval && !zeroHashrateWatchdog) {
+                        armZeroWatchdog();
+                    }
+                }
+
                 if (['PROGRESS', 'FOUND_BLOCK', 'LOG', 'SHARE_ACCEPTED'].includes(data.type)) {
                     self.postMessage({ ...data, engine: data.engine || 'CUDA' });
                 }
@@ -76,6 +110,11 @@ async function startMining(payload: any) {
 
 function initFallbackWebMiner(payload: any) {
     if (fallbackInterval) return;
+
+    if (zeroHashrateWatchdog) {
+        clearTimeout(zeroHashrateWatchdog);
+        zeroHashrateWatchdog = null;
+    }
 
     self.postMessage({ type: 'LOG', message: 'Initializing Fallback Web-Worker Proof-of-Entropy Engine...', logType: 'info' });
     self.postMessage({ type: 'LOG', message: `Stratum Target: ${payload.stratum || 'stratum+tcp://quai.pool.bolt-evm.com:3333'}`, logType: 'info' });
