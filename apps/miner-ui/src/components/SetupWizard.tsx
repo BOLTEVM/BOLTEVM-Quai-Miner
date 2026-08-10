@@ -80,7 +80,10 @@ export default function SetupWizard() {
         try {
             const response = await fetch('/api/hardware');
             const data = await response.json();
-            if (data.gpus) setGpus(data.gpus);
+            if (data.gpus && Array.isArray(data.gpus)) {
+                const normalizedGpus = data.gpus.map((g: any) => typeof g === 'string' ? g : (g?.name || 'Unknown GPU'));
+                setGpus(normalizedGpus);
+            }
             if (data.cpu) setCpu(data.cpu);
 
             if (!data.gpus?.length && !data.cpu) {
@@ -224,7 +227,7 @@ export default function SetupWizard() {
                                             {gpus.map((gpu, i) => (
                                                 <div key={i} className="gpu-item">
                                                     <Cpu size={18} color="var(--accent-cyan)" />
-                                                    <span>{gpu}</span>
+                                                    <span>{typeof gpu === 'string' ? gpu : (gpu as any)?.name || 'NVIDIA GPU'}</span>
                                                 </div>
                                             ))}
                                         </div>
@@ -513,7 +516,7 @@ export default function SetupWizard() {
                             <div className="s-row"><span>Wallet</span> <span className="truncate">{wallet}</span></div>
                             <div className="s-row"><span>Mode</span> <span className="capitalize">{miningMode} Mining</span></div>
                             {(miningMode === 'gpu' || miningMode === 'dual') && (
-                                <div className="s-row"><span>GPUs</span> <span style={{ textAlign: 'right' }}>{gpus.join(', ')}</span></div>
+                                <div className="s-row"><span>GPUs</span> <span style={{ textAlign: 'right' }}>{gpus.map(g => typeof g === 'string' ? g : (g as any)?.name || 'NVIDIA GPU').join(', ')}</span></div>
                             )}
                             {(miningMode === 'cpu' || miningMode === 'dual') && (
                                 <div className="s-row"><span>CPU</span> <span style={{ textAlign: 'right' }}>{cpu?.name}</span></div>
