@@ -14,9 +14,10 @@ interface Log {
 interface MiningConsoleProps {
   onBlockFound?: () => void;
   onHashrateUpdate?: (mh: number) => void;
+  onShareAccepted?: (shareInfo?: { nonce?: string; difficulty?: number }) => void;
 }
 
-export default function MiningConsole({ onBlockFound, onHashrateUpdate }: MiningConsoleProps) {
+export default function MiningConsole({ onBlockFound, onHashrateUpdate, onShareAccepted }: MiningConsoleProps) {
   const [logs, setLogs] = useState<Log[]>([]);
   const [activePool, setActivePool] = useState('cyprus1.rpc.quai.network');
   const [isWorkerActive, setIsWorkerActive] = useState(false);
@@ -98,6 +99,9 @@ export default function MiningConsole({ onBlockFound, onHashrateUpdate }: Mining
           addLog(message, logType || 'info');
         } else if (type === 'SHARE_ACCEPTED') {
           addLog(message || `Share Accepted! Nonce: ${nonce || '0x...'}`, 'success');
+          if (onShareAccepted) {
+            onShareAccepted({ nonce });
+          }
         } else if (type === 'PROGRESS') {
           const formattedHr = hashrate >= 1000 ? `${(hashrate / 1000).toFixed(2)} GH/s` : `${hashrate.toFixed(2)} MH/s`;
           addLog(`[Telemetry] Speed: ${formattedHr} | Entropy Hash: 0x${lastHash || '...'}`, 'info');

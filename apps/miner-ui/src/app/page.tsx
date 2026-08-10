@@ -19,6 +19,7 @@ export default function Dashboard() {
     activeWorkers: '0 / 0'
   });
   const [sessionRewards, setSessionRewards] = useState(0);
+  const [acceptedShares, setAcceptedShares] = useState(0);
   const [isMining, setIsMining] = useState(false);
 
   useEffect(() => {
@@ -27,46 +28,54 @@ export default function Dashboard() {
         const storedState = localStorage.getItem('miner_state');
         let walletAddress = '';
         if (storedState) {
-          const state = JSON.parse(storedState);
-          walletAddress = state.wallet;
+          try {
+            const state = JSON.parse(storedState);
+            walletAddress = state.wallet || '';
 
-          if (state.active) {
-            setIsMining(true);
-            let totalMHs = 0;
-            let workerCount = 0;
+            if (state.active) {
+              setIsMining(true);
+              let totalMHs = 0;
+              let workerCount = 0;
 
-            if (state.mode === 'gpu' || state.mode === 'dual') {
-              state.gpus.forEach((gpu: string) => {
-                const est = estimateHashrate(gpu, 'gpu');
+              if (state.mode === 'gpu' || state.mode === 'dual') {
+                (state.gpus || []).forEach((gpu: string) => {
+                  const est = estimateHashrate(gpu, 'gpu');
+                  totalMHs += convertToMHs(est.value, est.unit);
+                  workerCount++;
+                });
+              }
+
+              if (state.mode === 'cpu' || state.mode === 'dual') {
+                const cpuName = state.cpu?.name || 'Generic CPU';
+                const est = estimateHashrate(cpuName, 'cpu');
                 totalMHs += convertToMHs(est.value, est.unit);
                 workerCount++;
-              });
-            }
+              }
 
-            if (state.mode === 'cpu' || state.mode === 'dual') {
-              const cpuName = state.cpu?.name || 'Generic CPU';
-              const est = estimateHashrate(cpuName, 'cpu');
-              totalMHs += convertToMHs(est.value, est.unit);
-              workerCount++;
+              setStats(prev => ({
+                ...prev,
+                localHashrate: formatMHsTotal(totalMHs),
+                activeWorkers: `${workerCount} / ${workerCount}`
+              }));
             }
-
-            setStats(prev => ({
-              ...prev,
-              localHashrate: formatMHsTotal(totalMHs),
-              activeWorkers: `${workerCount} / ${workerCount}`
-            }));
-          }
+          } catch (e) {}
         }
 
-        const response = await fetch(`/api/quai?address=${walletAddress}`);
+        const encodedAddress = encodeURIComponent(walletAddress);
+        const response = await fetch(`/api/quai?address=${encodedAddress}`);
+        if (!response.ok) {
+          return;
+        }
         const data = await response.json();
-        setStats(prev => ({
-          ...prev,
-          networkHashrate: data.networkHashrate,
-          totalRewards: data.totalPaid || '0.00 QUAI'
-        }));
+        if (data && typeof data === 'object') {
+          setStats(prev => ({
+            ...prev,
+            networkHashrate: data.networkHashrate || prev.networkHashrate || '185.0 GH/s',
+            totalRewards: data.totalPaid || prev.totalRewards || '0.00 QUAI'
+          }));
+        }
       } catch (error) {
-        console.error('Failed to fetch stats:', error);
+        console.warn('Failed to fetch miner stats (using defaults):', error);
       }
     };
     fetchStats();
@@ -81,6 +90,11 @@ export default function Dashboard() {
     // Standard Quai Cyprus-1 block reward estimation
     setSessionRewards(prev => prev + 2.5);
   };
+
+  const handleShareAccepted = useCallback(() => {
+    setAcceptedShares(prev => prev + 1);
+    setSessionRewards(prev => prev + 0.05);
+  }, []);
 
   const [measuredHashrate, setMeasuredHashrate] = useState<string | null>(null);
   const lastUpdateRef = useRef(0);
@@ -136,7 +150,7 @@ export default function Dashboard() {
           <StatCard
             title="Total Rewards"
             value={stats.totalRewards}
-            subValue={`+ ${sessionRewards.toFixed(2)} Session Est.`}
+            subValue={`+${sessionRewards.toFixed(2)} Est. (${acceptedShares} shares)`}
             icon={Database}
             live={isMining}
             trend={sessionRewards > 0 ? (sessionRewards / confirmedRewards * 100) : undefined}
@@ -153,7 +167,7 @@ export default function Dashboard() {
 
         <HashrateChart />
         <MinerInstructions />
-        <MiningConsole onBlockFound={handleBlockFound} onHashrateUpdate={handleHashrateUpdate} />
+        <MiningConsole onBlockFound={handleBlockFound} onHashrateUpdate={handleHashrateUpdate} onShareAccepted={handleShareAccepted} />
       </main>
 
       <style jsx>{`
