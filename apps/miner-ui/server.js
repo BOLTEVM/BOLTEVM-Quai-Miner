@@ -7,8 +7,76 @@ const wss = new WebSocketServer({ port: 8081 });
 console.log('Local Middleware WebSocket Server running on port 8081');
 
 let minerProcess = null;
-const LIVE_CHAIN_HEIGHT = 5097443; // Quai Network Zone Cyprus-1 Live Block Height Reference
-let activePoolJobBlock = LIVE_CHAIN_HEIGHT;
+
+// Dynamic Multi-Tier Quai Network Chain Heights
+let chainHeights = {
+    zone: 9498168,   // Cyprus-1 Zone height (~9.50M)
+    region: 5097653, // Cyprus Region height (~5.10M)
+    prime: 2099398   // Prime Chain height (~2.10M)
+};
+let activePoolJobBlock = chainHeights.region;
+
+const RPC_TIERS = [
+    { name: 'zone', url: 'https://rpc.quai.network/cyprus1' },
+    { name: 'region', url: 'https://rpc.quai.network/cyprus' },
+    { name: 'prime', url: 'https://rpc.quai.network/prime' }
+];
+
+async function pollDynamicChainHeights() {
+    for (const tier of RPC_TIERS) {
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 4000);
+
+            const res = await fetch(tier.url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ jsonrpc: '2.0', method: 'quai_blockNumber', params: [], id: 1 }),
+                signal: controller.signal
+            }).catch(() => null);
+
+            clearTimeout(timeoutId);
+
+            if (res && res.ok) {
+                const data = await res.json();
+                if (data.result) {
+                    const blockNum = parseInt(data.result, 16);
+                    if (!isNaN(blockNum) && blockNum > 0) {
+                        chainHeights[tier.name] = blockNum;
+                    }
+                }
+            }
+        } catch (e) {}
+    }
+}
+
+// Poll RPC chain tiers every 15 seconds
+setInterval(pollDynamicChainHeights, 15000);
+pollDynamicChainHeights();
+
+function isValidPoolBlock(poolBlock) {
+    if (!poolBlock || poolBlock <= 0) return true;
+    const tol = 1500; // Allow 1500 block tolerance for pool template buffering
+    const matchesZone = Math.abs(poolBlock - chainHeights.zone) <= tol;
+    const matchesRegion = Math.abs(poolBlock - chainHeights.region) <= tol;
+    const matchesPrime = Math.abs(poolBlock - chainHeights.prime) <= tol;
+    // Stratum pools mine at Region/Prime or Zone headers
+    return matchesZone || matchesRegion || matchesPrime || poolBlock >= 4000000;
+}
+
+function hardStopStaleMiner(poolBlock) {
+    console.error(`[HARD-STOP] Pool template lagged all 3 chain tiers (${poolBlock}). Terminating miner process.`);
+    if (minerProcess) {
+        try {
+            if (process.platform === 'win32') {
+                spawn('taskkill', ['/pid', minerProcess.pid, '/f', '/t']);
+            } else {
+                minerProcess.kill('SIGTERM');
+            }
+        } catch (e) {}
+        minerProcess = null;
+    }
+}
 
 function getMinerExecutablePath() {
     const candidates = [
@@ -101,15 +169,16 @@ wss.on('connection', function connection(ws) {
                         const blockMatch = cleanLine.match(/block\s+(\d+)/i);
                         if (blockMatch) {
                             activePoolJobBlock = parseInt(blockMatch[1], 10);
-                            const drift = LIVE_CHAIN_HEIGHT - activePoolJobBlock;
+                            const valid = isValidPoolBlock(activePoolJobBlock);
 
-                            if (drift > 100) {
+                            if (!valid) {
+                                hardStopStaleMiner(activePoolJobBlock);
                                 broadcast({
                                     type: 'POOL_OUT_OF_SYNC',
                                     poolBlock: activePoolJobBlock,
-                                    chainBlock: LIVE_CHAIN_HEIGHT,
-                                    drift: drift,
-                                    message: `[WARNING] Pool block template out of sync! Pool Block: ${activePoolJobBlock} vs Cyprus-1 Chain Height: ${LIVE_CHAIN_HEIGHT} (${drift.toLocaleString()} blocks behind).`
+                                    chainBlock: chainHeights.zone,
+                                    drift: Math.abs(chainHeights.zone - activePoolJobBlock),
+                                    message: `[HARD-STOP] Stratum Pool out of sync with all Quai chain tiers! Pool Block: ${activePoolJobBlock} vs Zone: ${chainHeights.zone}, Region: ${chainHeights.region}, Prime: ${chainHeights.prime}. Native miner halted.`
                                 });
                             }
                         }
@@ -138,12 +207,12 @@ wss.on('connection', function connection(ws) {
                         // 4. Parse Share Accepted: e.g. "Accepted 350 ms", "**Accepted", or "Sol: ... found"
                         const shareMatch = cleanLine.match(/(?:Share accepted|\*\*Accepted|Accepted\s+\d+\s*ms|Sol:.*found)/i);
                         if (shareMatch) {
-                            const isStale = (LIVE_CHAIN_HEIGHT - activePoolJobBlock > 100);
+                            const isStale = !isValidPoolBlock(activePoolJobBlock);
                             broadcast({
                                 type: 'SHARE_ACCEPTED',
                                 isStale: isStale,
                                 poolBlock: activePoolJobBlock,
-                                chainBlock: LIVE_CHAIN_HEIGHT,
+                                chainBlock: chainHeights.zone,
                                 message: `Share Accepted! ${cleanLine} ${isStale ? '[STALE TEMPLATE]' : ''}`,
                                 nonce: `0x${Math.random().toString(16).substring(2, 10)}`
                             });
