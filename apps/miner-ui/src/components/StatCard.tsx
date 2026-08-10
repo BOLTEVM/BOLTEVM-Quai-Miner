@@ -1,12 +1,4 @@
-export default function StatCard({ title, value, subValue, icon: Icon, trend, live, onClick, badgeType }: any) {
-  const getBadgeStyle = () => {
-    if (badgeType === 'cuda') return { bg: 'rgba(0, 255, 127, 0.15)', color: '#00ff7f', border: '1px solid rgba(0, 255, 127, 0.4)' };
-    if (badgeType === 'fallback') return { bg: 'rgba(255, 159, 10, 0.15)', color: '#ff9f0a', border: '1px solid rgba(255, 159, 10, 0.4)' };
-    return { bg: 'transparent', color: 'var(--accent-cyan)', border: 'none' };
-  };
-
-  const badgeStyle = getBadgeStyle();
-
+export default function StatCard({ title, value, subValue, icon: Icon, trend, live, onClick }: any) {
   return (
     <div className={`glass-card stat-card animate-slide-up ${onClick ? 'clickable' : ''}`} onClick={onClick}>
       <div className="card-header">
@@ -14,30 +6,16 @@ export default function StatCard({ title, value, subValue, icon: Icon, trend, li
           <Icon size={24} color="var(--accent-cyan)" />
           {live && <div className="pulse-dot"></div>}
         </div>
-        {trend && (
+        {typeof trend === 'number' && Number.isFinite(trend) && trend !== 0 && (
           <span className={`trend ${trend > 0 ? 'positive' : 'negative'}`}>
-            {trend > 0 ? '↑' : '↓'} {Math.abs(trend)}%
+            {trend > 0 ? '↑' : '↓'} {Math.abs(trend).toFixed(1)}%
           </span>
         )}
       </div>
       <div className="card-body">
         <span className="stat-title">{title}</span>
         <h3 className="stat-value">{value}</h3>
-        {subValue && (
-          <div
-            className="stat-subvalue"
-            style={{
-              background: badgeStyle.bg,
-              color: badgeStyle.color,
-              border: badgeStyle.border,
-              padding: badgeType ? '2px 8px' : '0',
-              borderRadius: '4px',
-              display: 'inline-block'
-            }}
-          >
-            {subValue}
-          </div>
-        )}
+        {subValue && <div className="stat-subvalue">{subValue}</div>}
       </div>
       <style jsx>{`
         .stat-card {

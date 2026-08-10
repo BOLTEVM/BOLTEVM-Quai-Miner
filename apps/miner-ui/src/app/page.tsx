@@ -121,6 +121,9 @@ export default function Dashboard() {
   // Combined rewards (Confirmed + Session)
   const confirmedRewards = parseFloat(stats.totalRewards.split(' ')[0]) || 0;
   const totalCombined = (confirmedRewards + sessionRewards).toFixed(2);
+  const rewardTrend = sessionRewards > 0
+    ? (confirmedRewards > 0 ? (sessionRewards / confirmedRewards) * 100 : 100)
+    : undefined;
 
   return (
     <div className="dashboard-container">
@@ -159,11 +162,11 @@ export default function Dashboard() {
           />
           <StatCard
             title="Total Rewards"
-            value={stats.totalRewards}
-            subValue={`+${sessionRewards.toFixed(2)} Est. (${acceptedShares} shares)`}
+            value={`${totalCombined} QUAI`}
+            subValue={`${confirmedRewards.toFixed(4)} Confirmed | +${sessionRewards.toFixed(2)} Est. (${acceptedShares} shares)`}
             icon={Database}
             live={isMining}
-            trend={sessionRewards > 0 ? (sessionRewards / confirmedRewards * 100) : undefined}
+            trend={rewardTrend}
             onClick={() => {
               const stored = localStorage.getItem('miner_state');
               let targetWallet = '';
