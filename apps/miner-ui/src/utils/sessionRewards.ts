@@ -1,12 +1,16 @@
 /**
- * Persistent Session Reward Accounting Utility
+ * Persistent Dual-Bucket Session Reward Accounting Utility
  * Backed by localStorage ('bolt_session_rewards')
  */
 
 export interface SessionRewardState {
-    acceptedShares: number;
+    validShares: number;
+    staleShares: number;
+    validSessionRewards: number;
+    staleSessionRewards: number;
+    acceptedShares: number; // Sum of validShares + staleShares
     blocksFound: number;
-    sessionRewards: number;
+    sessionRewards: number; // Valid rewards
     lastUpdated: string;
 }
 
@@ -14,29 +18,65 @@ const STORAGE_KEY = 'bolt_session_rewards';
 
 export function getStoredSessionRewards(): SessionRewardState {
     if (typeof window === 'undefined') {
-        return { acceptedShares: 0, blocksFound: 0, sessionRewards: 0, lastUpdated: new Date().toISOString() };
+        return {
+            validShares: 0,
+            staleShares: 0,
+            validSessionRewards: 0,
+            staleSessionRewards: 0,
+            acceptedShares: 0,
+            blocksFound: 0,
+            sessionRewards: 0,
+            lastUpdated: new Date().toISOString()
+        };
     }
     try {
         const stored = localStorage.getItem(STORAGE_KEY);
         if (stored) {
             const parsed = JSON.parse(stored);
+            const validShares = typeof parsed.validShares === 'number' ? parsed.validShares : (parsed.acceptedShares || 0);
+            const staleShares = typeof parsed.staleShares === 'number' ? parsed.staleShares : 0;
+            const validSessionRewards = typeof parsed.validSessionRewards === 'number' ? parsed.validSessionRewards : (parsed.sessionRewards || 0);
+            const staleSessionRewards = typeof parsed.staleSessionRewards === 'number' ? parsed.staleSessionRewards : 0;
+
             return {
-                acceptedShares: parsed.acceptedShares || 0,
+                validShares,
+                staleShares,
+                validSessionRewards,
+                staleSessionRewards,
+                acceptedShares: validShares + staleShares,
                 blocksFound: parsed.blocksFound || 0,
-                sessionRewards: parsed.sessionRewards || 0,
+                sessionRewards: validSessionRewards,
                 lastUpdated: parsed.lastUpdated || new Date().toISOString()
             };
         }
     } catch (e) {}
-    return { acceptedShares: 0, blocksFound: 0, sessionRewards: 0, lastUpdated: new Date().toISOString() };
+    return {
+        validShares: 0,
+        staleShares: 0,
+        validSessionRewards: 0,
+        staleSessionRewards: 0,
+        acceptedShares: 0,
+        blocksFound: 0,
+        sessionRewards: 0,
+        lastUpdated: new Date().toISOString()
+    };
 }
 
 export function saveSessionRewards(state: Partial<SessionRewardState>): SessionRewardState {
     const current = getStoredSessionRewards();
+    const validShares = state.validShares !== undefined ? state.validShares : current.validShares;
+    const staleShares = state.staleShares !== undefined ? state.staleShares : current.staleShares;
+    const validSessionRewards = state.validSessionRewards !== undefined ? state.validSessionRewards : current.validSessionRewards;
+    const staleSessionRewards = state.staleSessionRewards !== undefined ? state.staleSessionRewards : current.staleSessionRewards;
+
     const updated: SessionRewardState = {
-        acceptedShares: state.acceptedShares !== undefined ? state.acceptedShares : current.acceptedShares,
+        validShares,
+        staleShares,
+        validSessionRewards,
+        staleSessionRewards,
+        acceptedShares: validShares + staleShares,
         blocksFound: state.blocksFound !== undefined ? state.blocksFound : current.blocksFound,
-        sessionRewards: state.sessionRewards !== undefined ? state.sessionRewards : current.sessionRewards,
+        sessionRewards: validSessionRewards,
         lastUpdated: new Date().toISOString()
     };
     if (typeof window !== 'undefined') {
@@ -47,16 +87,24 @@ export function saveSessionRewards(state: Partial<SessionRewardState>): SessionR
     return updated;
 }
 
-export function recordAcceptedShare(
-    shareDiff: number = 0.048,
-    networkDiff: number = 1000000,
-    blockReward: number = 1.5
-): SessionRewardState {
+export function recordAcceptedShare(isStale: boolean = false, rewardPerShare: number = 0.05): SessionRewardState {
     const current = getStoredSessionRewards();
-    const calculatedReward = (shareDiff * blockReward) / Math.max(1, networkDiff);
+    if (isStale) {
+        return saveSessionRewards({
+            staleShares: current.staleShares + 1
+        });
+    }
     return saveSessionRewards({
-        acceptedShares: current.acceptedShares + 1,
-        sessionRewards: current.sessionRewards + calculatedReward
+        validShares: current.validShares + 1,
+        validSessionRewards: current.validSessionRewards + rewardPerShare
+    });
+}
+
+export function purgeStaleShares(): SessionRewardState {
+    const current = getStoredSessionRewards();
+    return saveSessionRewards({
+        staleShares: 0,
+        staleSessionRewards: 0
     });
 }
 
@@ -64,6 +112,6 @@ export function recordBlockFound(rewardPerBlock = 2.5): SessionRewardState {
     const current = getStoredSessionRewards();
     return saveSessionRewards({
         blocksFound: current.blocksFound + 1,
-        sessionRewards: current.sessionRewards + rewardPerBlock
+        validSessionRewards: current.validSessionRewards + rewardPerBlock
     });
 }

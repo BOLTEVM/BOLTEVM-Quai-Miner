@@ -9,7 +9,7 @@ import MiningConsole from '../components/MiningConsole'
 import MinerInstructions from '../components/MinerInstructions'
 import { Cpu, Activity, Database, Globe, Zap } from 'lucide-react'
 import { estimateHashrate, convertToMHs, formatMHsTotal } from '../utils/hashrate'
-import { getStoredSessionRewards, recordAcceptedShare, recordBlockFound } from '../utils/sessionRewards'
+import { getStoredSessionRewards, recordAcceptedShare, recordBlockFound, purgeStaleShares } from '../utils/sessionRewards'
 
 export default function Dashboard() {
   const router = useRouter();
@@ -20,13 +20,15 @@ export default function Dashboard() {
     activeWorkers: '0 / 0'
   });
   const [sessionRewards, setSessionRewards] = useState(0);
-  const [acceptedShares, setAcceptedShares] = useState(0);
+  const [validShares, setValidShares] = useState(0);
+  const [staleShares, setStaleShares] = useState(0);
   const [isMining, setIsMining] = useState(false);
 
   useEffect(() => {
     const storedRewards = getStoredSessionRewards();
-    setSessionRewards(storedRewards.sessionRewards);
-    setAcceptedShares(storedRewards.acceptedShares);
+    setSessionRewards(storedRewards.validSessionRewards);
+    setValidShares(storedRewards.validShares);
+    setStaleShares(storedRewards.staleShares);
   }, []);
 
   useEffect(() => {
@@ -95,13 +97,15 @@ export default function Dashboard() {
 
   const handleBlockFound = () => {
     const updated = recordBlockFound(2.5);
-    setSessionRewards(updated.sessionRewards);
+    setSessionRewards(updated.validSessionRewards);
   };
 
-  const handleShareAccepted = useCallback(() => {
-    const updated = recordAcceptedShare(0.05);
-    setSessionRewards(updated.sessionRewards);
-    setAcceptedShares(updated.acceptedShares);
+  const handleShareAccepted = useCallback((shareInfo?: { nonce?: string; isStale?: boolean }) => {
+    const isStale = shareInfo?.isStale === true;
+    const updated = recordAcceptedShare(isStale, 0.05);
+    setSessionRewards(updated.validSessionRewards);
+    setValidShares(updated.validShares);
+    setStaleShares(updated.staleShares);
   }, []);
 
   const [measuredHashrate, setMeasuredHashrate] = useState<string | null>(null);
@@ -163,7 +167,7 @@ export default function Dashboard() {
           <StatCard
             title="Total Rewards"
             value={`${totalCombined} QUAI`}
-            subValue={`${confirmedRewards.toFixed(4)} Confirmed | +${sessionRewards.toFixed(2)} Est. (${acceptedShares} shares)`}
+            subValue={`${confirmedRewards.toFixed(4)} Confirmed | +${sessionRewards.toFixed(2)} Est. (${validShares} valid${staleShares > 0 ? `, ${staleShares} stale` : ''})`}
             icon={Database}
             live={isMining}
             trend={rewardTrend}

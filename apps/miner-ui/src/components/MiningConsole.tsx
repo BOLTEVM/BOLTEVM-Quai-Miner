@@ -14,7 +14,7 @@ interface Log {
 interface MiningConsoleProps {
   onBlockFound?: () => void;
   onHashrateUpdate?: (mh: number) => void;
-  onShareAccepted?: (shareInfo?: { nonce?: string; difficulty?: number }) => void;
+  onShareAccepted?: (shareInfo?: { nonce?: string; difficulty?: number; isStale?: boolean }) => void;
 }
 
 export default function MiningConsole({ onBlockFound, onHashrateUpdate, onShareAccepted }: MiningConsoleProps) {
@@ -98,9 +98,13 @@ export default function MiningConsole({ onBlockFound, onHashrateUpdate, onShareA
         if (type === 'LOG') {
           addLog(message, logType || 'info');
         } else if (type === 'SHARE_ACCEPTED') {
-          addLog(message || `Share Accepted! Nonce: ${nonce || '0x...'}`, 'success');
+          const isStale = e.data.isStale === true;
+          const logMsg = isStale
+            ? `[STALE SHARE REJECTED] Share accepted by pool proxy on outdated block ${e.data.poolBlock || '4492053'} (Chain height: ${e.data.chainBlock || '5097443'})`
+            : (message || `Share Accepted! Nonce: ${nonce || '0x...'}`);
+          addLog(logMsg, isStale ? 'warning' : 'success');
           if (onShareAccepted) {
-            onShareAccepted({ nonce });
+            onShareAccepted({ nonce, isStale });
           }
         } else if (type === 'PROGRESS') {
           const formattedHr = hashrate >= 1000 ? `${(hashrate / 1000).toFixed(2)} GH/s` : `${hashrate.toFixed(2)} MH/s`;

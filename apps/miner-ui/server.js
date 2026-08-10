@@ -8,6 +8,7 @@ console.log('Local Middleware WebSocket Server running on port 8081');
 
 let minerProcess = null;
 const LIVE_CHAIN_HEIGHT = 5097443; // Quai Network Zone Cyprus-1 Live Block Height Reference
+let activePoolJobBlock = LIVE_CHAIN_HEIGHT;
 
 function getMinerExecutablePath() {
     const candidates = [
@@ -99,16 +100,16 @@ wss.on('connection', function connection(ws) {
                         // 2. Parse Stratum Job Block Height & Monitor Pool Desynchronization
                         const blockMatch = cleanLine.match(/block\s+(\d+)/i);
                         if (blockMatch) {
-                            const poolBlockNumber = parseInt(blockMatch[1], 10);
-                            const drift = LIVE_CHAIN_HEIGHT - poolBlockNumber;
+                            activePoolJobBlock = parseInt(blockMatch[1], 10);
+                            const drift = LIVE_CHAIN_HEIGHT - activePoolJobBlock;
 
                             if (drift > 100) {
                                 broadcast({
                                     type: 'POOL_OUT_OF_SYNC',
-                                    poolBlock: poolBlockNumber,
+                                    poolBlock: activePoolJobBlock,
                                     chainBlock: LIVE_CHAIN_HEIGHT,
                                     drift: drift,
-                                    message: `[WARNING] Pool block template out of sync! Pool Block: ${poolBlockNumber} vs Cyprus-1 Chain Height: ${LIVE_CHAIN_HEIGHT} (${drift.toLocaleString()} blocks behind).`
+                                    message: `[WARNING] Pool block template out of sync! Pool Block: ${activePoolJobBlock} vs Cyprus-1 Chain Height: ${LIVE_CHAIN_HEIGHT} (${drift.toLocaleString()} blocks behind).`
                                 });
                             }
                         }
@@ -137,9 +138,13 @@ wss.on('connection', function connection(ws) {
                         // 4. Parse Share Accepted: e.g. "Accepted 350 ms", "**Accepted", or "Sol: ... found"
                         const shareMatch = cleanLine.match(/(?:Share accepted|\*\*Accepted|Accepted\s+\d+\s*ms|Sol:.*found)/i);
                         if (shareMatch) {
+                            const isStale = (LIVE_CHAIN_HEIGHT - activePoolJobBlock > 100);
                             broadcast({
                                 type: 'SHARE_ACCEPTED',
-                                message: `Share Accepted! ${cleanLine}`,
+                                isStale: isStale,
+                                poolBlock: activePoolJobBlock,
+                                chainBlock: LIVE_CHAIN_HEIGHT,
+                                message: `Share Accepted! ${cleanLine} ${isStale ? '[STALE TEMPLATE]' : ''}`,
                                 nonce: `0x${Math.random().toString(16).substring(2, 10)}`
                             });
                         }
