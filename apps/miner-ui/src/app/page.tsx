@@ -22,6 +22,7 @@ export default function Dashboard() {
   const [sessionRewards, setSessionRewards] = useState(0);
   const [validShares, setValidShares] = useState(0);
   const [staleShares, setStaleShares] = useState(0);
+  const [acceptedShares, setAcceptedShares] = useState(0);
   const [isMining, setIsMining] = useState(false);
 
   useEffect(() => {
@@ -29,6 +30,7 @@ export default function Dashboard() {
     setSessionRewards(storedRewards.validSessionRewards);
     setValidShares(storedRewards.validShares);
     setStaleShares(storedRewards.staleShares);
+    setAcceptedShares(storedRewards.acceptedShares);
   }, []);
 
   useEffect(() => {
@@ -106,6 +108,7 @@ export default function Dashboard() {
     setSessionRewards(updated.validSessionRewards);
     setValidShares(updated.validShares);
     setStaleShares(updated.staleShares);
+    setAcceptedShares(updated.acceptedShares);
   }, []);
 
   const [measuredHashrate, setMeasuredHashrate] = useState<string | null>(null);
