@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react'
 import Sidebar from '../../components/Sidebar'
 import { Wallet, ArrowDownRight, Zap } from 'lucide-react'
 
+import { useMinerState } from '../../hooks/useMinerState';
+
 const DEFAULT_REWARDS = {
     networkHashrate: '185.0 GH/s',
     totalPaid: '0.0000 QUAI',
@@ -14,21 +16,13 @@ const DEFAULT_REWARDS = {
 };
 
 export default function RewardsPage() {
+    const { state } = useMinerState();
     const [rewardsData, setRewardsData] = useState<any>(null);
-    const [wallet, setWallet] = useState<string | null>(null);
+
+    const wallet = state.wallet;
 
     useEffect(() => {
-        let activeWallet = '';
-        const storedState = localStorage.getItem('miner_state');
-        if (storedState) {
-            try {
-                const state = JSON.parse(storedState);
-                if (state && typeof state === 'object' && state.wallet) {
-                    activeWallet = state.wallet;
-                    setWallet(state.wallet);
-                }
-            } catch (e) {}
-        }
+        const activeWallet = wallet || '';
 
         const fetchData = async () => {
             try {
@@ -46,7 +40,7 @@ export default function RewardsPage() {
         };
 
         fetchData();
-    }, []);
+    }, [wallet]);
 
     if (!rewardsData) {
         return (

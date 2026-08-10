@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Sidebar from '../../components/Sidebar';
 import MinerTable, { WorkerItem } from '../../components/MinerTable';
 import { Plus, X, Server, Cpu as CpuIcon, ShieldCheck } from 'lucide-react';
+import { useMinerState } from '../../hooks/useMinerState';
 
 interface Toast {
   id: number;
@@ -12,6 +13,7 @@ interface Toast {
 }
 
 export default function MinersPage() {
+  const { state, addCustomWorker } = useMinerState();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [toasts, setToasts] = useState<Toast[]>([]);
@@ -29,6 +31,8 @@ export default function MinersPage() {
   const [wallet, setWallet] = useState('');
 
   useEffect(() => {
+    if (state.wallet) setWallet(state.wallet);
+
     fetch('/api/hardware')
       .then(res => res.json())
       .then(data => {
@@ -41,24 +45,14 @@ export default function MinersPage() {
           setSelectedHardware('NVIDIA RTX 4090');
         }
         if (data.cpu) {
-          setDetectedCpu(data.cpu.name || 'AMD Ryzen 9 / Intel i9');
+          setDetectedCpu(data.cpu.name || 'Generic CPU');
         }
       })
       .catch(() => {
         setDetectedGpus(['NVIDIA RTX 4090', 'NVIDIA RTX 3080']);
         setSelectedHardware('NVIDIA RTX 4090');
       });
-
-    const stored = localStorage.getItem('miner_state');
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored);
-        if (parsed && typeof parsed === 'object' && parsed.wallet) {
-          setWallet(parsed.wallet);
-        }
-      } catch (e) {}
-    }
-  }, []);
+  }, [state.wallet]);
 
   const addToast = (message: string, type: Toast['type'] = 'info') => {
     const id = Date.now() + Math.random();
@@ -81,19 +75,6 @@ export default function MinersPage() {
       return;
     }
 
-    const stored = localStorage.getItem('miner_state');
-    let currentState: any = { active: true, mode: 'dual', gpus: [], customWorkers: [] };
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored);
-        if (parsed && typeof parsed === 'object') {
-          currentState = parsed;
-        }
-      } catch (e) {}
-    }
-
-    const existingWorkers: WorkerItem[] = currentState.customWorkers || [];
-
     const newWorker: WorkerItem = {
       id: workerId.trim(),
       type: workerCategory === 'remote' ? `Remote Node (${stratumPool.replace('stratum+tcp://', '')})` : (selectedHardware || detectedCpu),
@@ -106,10 +87,7 @@ export default function MinersPage() {
       intensity: intensity
     };
 
-    const updatedWorkers = [...existingWorkers, newWorker];
-    currentState.active = true;
-    currentState.customWorkers = updatedWorkers;
-    localStorage.setItem('miner_state', JSON.stringify(currentState));
+    addCustomWorker(newWorker);
 
     addToast(`Worker ${newWorker.id} successfully configured and deployed!`, 'success');
     setIsModalOpen(false);
