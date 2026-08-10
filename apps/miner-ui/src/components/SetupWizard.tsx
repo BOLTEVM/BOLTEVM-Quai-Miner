@@ -21,11 +21,11 @@ const networks = [
 ];
 
 const pools = [
-    { id: 'bolt', name: 'BoltPool', url: 'stratum+tcp://quai.pool.bolt-evm.com:3333', desc: 'Recommended, optimized for BoltEVM.' },
+    { id: 'kryptex', name: 'Kryptex (Live Mainnet Pool)', url: 'stratum+tcp://quai-kawpow.kryptex.network:7043', desc: 'Recommended, high hashrate & stable connection.' },
     { id: 'herominers', name: 'HeroMiners', url: 'stratum+tcp://us.quai.herominers.com:1185', desc: 'High hashrate, global coverage.' },
     { id: 'k1pool', name: 'K1Pool', url: 'stratum+tcp://us.quaikawpow.k1pool.com:3344', desc: 'Low latency, reliable stratum.' },
-    { id: 'kryptex', name: 'Kryptex', url: 'stratum+tcp://quai-kawpow.kryptex.network:7043', desc: 'User friendly, stable connection.' },
-    { id: 'solo', name: 'Solo (Local Node)', url: 'stratum+tcp://localhost:3333', desc: 'Mine directly to your own local node.' },
+    { id: 'bolt', name: 'BoltPool (Local Stratum)', url: 'stratum+tcp://127.0.0.1:3333', desc: 'Local stratum daemon emulator for testing.' },
+    { id: 'solo', name: 'Solo (Local Node)', url: 'stratum+tcp://127.0.0.1:3333', desc: 'Mine directly to your own local node.' },
 ];
 
 export default function SetupWizard() {
@@ -46,7 +46,7 @@ export default function SetupWizard() {
     const [deps, setDeps] = useState<Array<{ name: string; required: boolean; ok: boolean; version: string | null; hint: string }>>([]);
     const [isRepairing, setIsRepairing] = useState(false);
     const [selectedNetwork, setSelectedNetwork] = useState('mainnet');
-    const [selectedPool, setSelectedPool] = useState('bolt');
+    const [selectedPool, setSelectedPool] = useState('kryptex');
     const [nodeSetupLogs, setNodeSetupLogs] = useState<string[]>([]);
     const [isSettingUpNode, setIsSettingUpNode] = useState(false);
     const [nodeSetupSuccess, setNodeSetupSuccess] = useState(false);

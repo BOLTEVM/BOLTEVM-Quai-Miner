@@ -112,9 +112,11 @@ export default function Dashboard() {
     const now = Date.now();
     if (now - lastUpdateRef.current > 500) {
       lastUpdateRef.current = now;
-      setMeasuredHashrate(mh > 1000 ? `${(mh / 1000).toFixed(1)} GH/s` : `${mh.toFixed(1)} MH/s`);
+      if (mh > 0 || !measuredHashrate) {
+        setMeasuredHashrate(mh > 1000 ? `${(mh / 1000).toFixed(1)} GH/s` : `${mh.toFixed(1)} MH/s`);
+      }
     }
-  }, []);
+  }, [measuredHashrate]);
 
   // Combined rewards (Confirmed + Session)
   const confirmedRewards = parseFloat(stats.totalRewards.split(' ')[0]) || 0;

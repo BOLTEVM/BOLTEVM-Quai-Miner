@@ -31,7 +31,7 @@ wss.on('connection', function connection(ws) {
             const parsed = JSON.parse(data);
             
             if (parsed.type === 'START') {
-                const { wallet, mode, stratum } = parsed.payload || {};
+                const { wallet, mode, stratum, workerId } = parsed.payload || {};
                 
                 if (minerProcess) {
                     try {
@@ -44,10 +44,10 @@ wss.on('connection', function connection(ws) {
                 }
 
                 const executable = getMinerExecutablePath();
-                const targetPool = stratum || 'stratum+tcp://quai.pool.bolt-evm.com:3333';
+                const targetPool = stratum || 'stratum+tcp://quai-kawpow.kryptex.network:7043';
                 const cleanPoolUrl = targetPool.replace(/^(?:stratum\+(?:tcp|ssl|tls):\/\/)?/, '');
                 const cleanWallet = (wallet && wallet.startsWith('0x') && wallet.length >= 42) ? wallet.trim().toLowerCase() : '0x0000000000000000000000000000000000000000';
-                const cleanWorkerId = (parsed.workerId || 'bolt-worker-1').trim().replace(/[^a-zA-Z0-9_-]/g, '');
+                const cleanWorkerId = (workerId || parsed.workerId || 'bolt-worker-1').trim().replace(/[^a-zA-Z0-9_-]/g, '');
                 const stratumEndpoint = `stratum+tcp://${cleanWallet}.${cleanWorkerId}@${cleanPoolUrl}`;
                 
                 console.log(`Starting miner executable (${executable}) -> ${stratumEndpoint} (mode: ${mode})`);
@@ -65,6 +65,15 @@ wss.on('connection', function connection(ws) {
 
                 minerProcess = spawn(executable, args);
 
+                const broadcast = (msgObj) => {
+                    const str = JSON.stringify(msgObj);
+                    wss.clients.forEach(client => {
+                        if (client.readyState === 1) {
+                            try { client.send(str); } catch (e) {}
+                        }
+                    });
+                };
+
                 const parseAndStreamOutput = (chunk) => {
                     const lines = chunk.toString().split('\n');
                     for (const line of lines) {
@@ -74,10 +83,17 @@ wss.on('connection', function connection(ws) {
                         // Strip ANSI color codes
                         const cleanLine = trimmed.replace(/\x1B\[[0-9;]*[a-zA-Z]/g, '');
 
-                        // 1. Send raw log output to UI console
-                        try {
-                            ws.send(JSON.stringify({ type: 'LOG', message: cleanLine, logType: 'info' }));
-                        } catch (e) {}
+                        // 1. Send raw log output to all UI consoles
+                        broadcast({ type: 'LOG', message: cleanLine, logType: 'info' });
+
+                        // Detect pool DNS / connection failure
+                        const offlineMatch = cleanLine.match(/(?:Not connected|getaddrinfo|Bad URI|Connection refused|Could not connect)/i);
+                        if (offlineMatch) {
+                            broadcast({
+                                type: 'POOL_OFFLINE',
+                                message: `Pool connection issue detected: ${cleanLine}. Engaging Web Worker engine...`
+                            });
+                        }
 
                         // 2. Parse Telemetry lines: e.g. "m 04:59:55 <unknown> 0:01 A1 42.50 Mh - cu0 42.50" or "Speed 42.50 Mh/s"
                         const hrMatch = cleanLine.match(/(?:Speed\s*:?\s*|A\d+(?::[RWF]\d+)*\s+)([\d.]+)\s*([kMGT]?)h(?:\/s)?/i);
@@ -92,37 +108,31 @@ wss.on('connection', function connection(ws) {
                             const hashMatch = cleanLine.match(/0x[0-9a-fA-F]{8,64}/) || cleanLine.match(/Job:\s*([0-9a-fA-F]+)/i);
                             const extractedHash = hashMatch ? (hashMatch[1] || hashMatch[0]) : null;
 
-                            try {
-                                ws.send(JSON.stringify({
-                                    type: 'PROGRESS',
-                                    hashrate: val,
-                                    hashes: Math.floor(val * 1e6),
-                                    lastHash: extractedHash
-                                }));
-                            } catch (e) {}
+                            broadcast({
+                                type: 'PROGRESS',
+                                hashrate: val,
+                                hashes: Math.floor(val * 1e6),
+                                lastHash: extractedHash
+                            });
                         }
 
                         // 3. Parse Share Accepted: e.g. "Accepted 350 ms", "**Accepted", or "Sol: ... found"
                         const shareMatch = cleanLine.match(/(?:Share accepted|\*\*Accepted|Accepted\s+\d+\s*ms|Sol:.*found)/i);
                         if (shareMatch) {
-                            try {
-                                ws.send(JSON.stringify({
-                                    type: 'SHARE_ACCEPTED',
-                                    message: cleanLine,
-                                    nonce: Math.floor(Math.random() * 0xffffffff).toString(16)
-                                }));
-                            } catch (e) {}
+                            broadcast({
+                                type: 'SHARE_ACCEPTED',
+                                message: `Share Accepted! ${cleanLine}`,
+                                nonce: `0x${Math.random().toString(16).substring(2, 10)}`
+                            });
                         }
 
                         // 4. Parse Found Solution
-                        const blockMatch = cleanLine.match(/(?:Solution found|Found block|REAL Block Solution|Sol:.*found)/i);
+                        const blockMatch = cleanLine.match(/(?:Solution found|Found block|REAL Block Solution)/i);
                         if (blockMatch) {
-                            try {
-                                ws.send(JSON.stringify({
-                                    type: 'FOUND_BLOCK',
-                                    proof: cleanLine
-                                }));
-                            } catch (e) {}
+                            broadcast({
+                                type: 'FOUND_BLOCK',
+                                proof: cleanLine
+                            });
                         }
                     }
                 };

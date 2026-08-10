@@ -41,9 +41,9 @@ async function startMining(payload: any) {
         ws.onmessage = (event) => {
             try {
                 const data = JSON.parse(event.data);
-                if (data.type === 'ERROR') {
-                    self.postMessage(data);
-                    if (data.message && data.message.includes('Failed to launch miner process') && !fallbackInterval) {
+                if (data.type === 'ERROR' || data.type === 'POOL_OFFLINE') {
+                    self.postMessage({ type: 'LOG', message: data.message || 'Pool or daemon connection error. Engaging Web Miner engine...', logType: 'warning' });
+                    if (!fallbackInterval) {
                         initFallbackWebMiner(payload);
                     }
                 }
