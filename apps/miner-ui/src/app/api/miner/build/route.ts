@@ -73,15 +73,14 @@ export async function POST() {
                 // Step 2: Unlink old binaries to guarantee writable target
                 cleanStaleBinaries(cwdPath, controller, encoder);
                 
-                // Set up Strawberry Perl and Ninja environment
+                // Set up environment (excluding MinGW C:\Strawberry\c\bin to prevent GCC compiler collision)
                 const strawberryPerlPath = 'C:\\Strawberry\\perl\\bin';
-                const strawberryCPath = 'C:\\Strawberry\\c\\bin';
                 const cmakePath = 'C:\\Program Files\\CMake\\bin';
                 
                 const env = { 
                     ...process.env, 
                     HUNTER_ROOT: 'C:\\h',
-                    PATH: `${strawberryPerlPath};${strawberryCPath};${cmakePath};${process.env.PATH}`
+                    PATH: `${strawberryPerlPath};${cmakePath};${process.env.PATH}`
                 };
 
                 const runBuild = (generator: string, buildDir: string, extraArgs: string[] = [], buildArgs: string[] = []): Promise<number> => {
@@ -127,13 +126,13 @@ export async function POST() {
                     });
                 };
 
-                // Attempt 1: Ninja (Strawberry Perl edition)
-                let result = await runBuild('Ninja', 'build-ninja');
+                // Attempt 1: Visual Studio 17 2022 (Native MSVC toolchain for Windows)
+                let result = await runBuild('Visual Studio 17 2022', 'build-vs', ['-A', 'x64'], ['--', '/m']);
 
-                // Fallback: Visual Studio 17 2022
+                // Fallback: Ninja generator
                 if (result !== 0) {
-                    controller.enqueue(encoder.encode("\n[WARNING] Ninja build failed or Ninja not found. Falling back to Visual Studio...\n"));
-                    result = await runBuild('Visual Studio 17 2022', 'build-vs', ['-A', 'x64'], ['--', '/m:1']);
+                    controller.enqueue(encoder.encode("\n[INFO] Visual Studio build failed or unavailable. Falling back to Ninja...\n"));
+                    result = await runBuild('Ninja', 'build-ninja');
                 }
 
                 if (result === 0) {
