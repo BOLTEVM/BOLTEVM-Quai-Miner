@@ -83,19 +83,16 @@ wss.on('connection', function connection(ws) {
                         // Strip ANSI color codes
                         const cleanLine = trimmed.replace(/\x1B\[[0-9;]*[a-zA-Z]/g, '');
 
-                        // 1. Send raw log output to all UI consoles
-                        broadcast({ type: 'LOG', message: cleanLine, logType: 'info' });
-
                         // Detect pool DNS / connection failure
                         const offlineMatch = cleanLine.match(/(?:Not connected|getaddrinfo|Bad URI|Connection refused|Could not connect)/i);
                         if (offlineMatch) {
                             broadcast({
                                 type: 'POOL_OFFLINE',
-                                message: `Pool connection issue detected: ${cleanLine}. Engaging Web Worker engine...`
+                                message: `Pool connection issue detected: ${cleanLine}`
                             });
                         }
 
-                        // 2. Parse Telemetry lines: e.g. "m 04:59:55 <unknown> 0:01 A1 42.50 Mh - cu0 42.50" or "Speed 42.50 Mh/s"
+                        // 1. Parse Telemetry lines: e.g. "m 04:59:55 <unknown> 0:01 A1 42.50 Mh - cu0 42.50" or "Speed 42.50 Mh/s"
                         const hrMatch = cleanLine.match(/(?:Speed\s*:?\s*|A\d+(?::[RWF]\d+)*\s+)([\d.]+)\s*([kMGT]?)h(?:\/s)?/i);
                         if (hrMatch) {
                             let val = parseFloat(hrMatch[1]);
@@ -117,23 +114,34 @@ wss.on('connection', function connection(ws) {
                             });
                         }
 
-                        // 3. Parse Share Accepted: e.g. "Accepted 350 ms", "**Accepted", or "Sol: ... found"
+                        // 2. Parse Share Accepted: e.g. "Accepted 350 ms", "**Accepted", or "Sol: ... found"
                         const shareMatch = cleanLine.match(/(?:Share accepted|\*\*Accepted|Accepted\s+\d+\s*ms|Sol:.*found)/i);
                         if (shareMatch) {
+                            const pingMatch = cleanLine.match(/(\d+)\s*ms/);
+                            const ping = pingMatch ? `${pingMatch[1]} ms` : 'OK';
+                            const nonceMatch = cleanLine.match(/(?:nonce|sol|job)[\s:]*(0x[0-9a-fA-F]+|[0-9a-fA-F]{8,64})/i);
+                            const realNonce = nonceMatch ? nonceMatch[1] : undefined;
+
                             broadcast({
                                 type: 'SHARE_ACCEPTED',
-                                message: `Share Accepted! ${cleanLine}`,
-                                nonce: `0x${Math.random().toString(16).substring(2, 10)}`
+                                message: `[Pool Response] Share Accepted (${ping}) - ${cleanLine}`,
+                                nonce: realNonce,
+                                latency: ping
                             });
                         }
 
-                        // 4. Parse Found Solution
+                        // 3. Parse Found Solution
                         const blockMatch = cleanLine.match(/(?:Solution found|Found block|REAL Block Solution)/i);
                         if (blockMatch) {
                             broadcast({
                                 type: 'FOUND_BLOCK',
                                 proof: cleanLine
                             });
+                        }
+
+                        // 4. Send non-telemetry log output to UI console to avoid duplicate speed line spam
+                        if (!hrMatch) {
+                            broadcast({ type: 'LOG', message: cleanLine, logType: shareMatch ? 'success' : blockMatch ? 'success' : offlineMatch ? 'warning' : 'info' });
                         }
                     }
                 };
@@ -157,7 +165,7 @@ wss.on('connection', function connection(ws) {
                     if (code !== 0 && code !== null) {
                         broadcast({
                             type: 'ERROR',
-                            message: `Native miner process exited (code ${code}). Engaging Web Worker engine...`
+                            message: `Native miner process exited with code ${code}. Check GPU drivers and pool configuration.`
                         });
                     } else {
                         broadcast({ type: 'LOG', message: `Miner process exited (code ${code})`, logType: 'warning' });

@@ -15,14 +15,14 @@ export default function Dashboard() {
   const router = useRouter();
   const [stats, setStats] = useState({
     networkHashrate: '185.0 GH/s',
-    localHashrate: '450.0 MH/s',
+    localHashrate: '0.00 MH/s',
     totalRewards: '0.00 QUAI',
-    activeWorkers: '1 / 1'
+    activeWorkers: '0 / 0'
   });
   const [sessionRewards, setSessionRewards] = useState(0);
   const [acceptedShares, setAcceptedShares] = useState(0);
-  const [isMining, setIsMining] = useState(true);
-  const [hashrateEngine, setHashrateEngine] = useState<'CUDA' | 'WEB_FALLBACK' | null>(null);
+  const [isMining, setIsMining] = useState(false);
+  const [hashrateEngine, setHashrateEngine] = useState<'CUDA' | null>(null);
   const [networkDiff, setNetworkDiff] = useState<number>(1000000);
 
   useEffect(() => {
@@ -39,14 +39,14 @@ export default function Dashboard() {
         try {
           const state = JSON.parse(storedState);
           walletAddress = state.wallet || '';
-          setIsMining(state.active !== false);
+          setIsMining(state.active === true);
 
-          if (state.active !== false) {
+          if (state.active === true) {
             let totalMHs = 0;
             let workerCount = 0;
 
             if (state.mode === 'gpu' || state.mode === 'dual' || !state.mode) {
-              const gpus = Array.isArray(state.gpus) && state.gpus.length > 0 ? state.gpus : ['NVIDIA GeForce RTX 2070'];
+              const gpus = Array.isArray(state.gpus) ? state.gpus : [];
               gpus.forEach((gpu: any) => {
                 const gpuName = typeof gpu === 'string' ? gpu : (gpu?.name || 'NVIDIA GPU');
                 const est = estimateHashrate(gpuName, 'gpu');
@@ -60,11 +60,6 @@ export default function Dashboard() {
               const est = estimateHashrate(cpuName, 'cpu');
               totalMHs += convertToMHs(est.value, est.unit);
               workerCount++;
-            }
-
-            if (totalMHs === 0) {
-              totalMHs = 450.0;
-              workerCount = 1;
             }
 
             setStats(prev => ({
@@ -119,11 +114,11 @@ export default function Dashboard() {
   const lastUpdateRef = useRef(0);
 
   // Handle hashrate updates from worker (throttled to 500ms)
-  const handleHashrateUpdate = useCallback((mh: number, engine?: 'CUDA' | 'WEB_FALLBACK') => {
+  const handleHashrateUpdate = useCallback((mh: number, engine?: 'CUDA') => {
     const now = Date.now();
     if (now - lastUpdateRef.current > 500) {
       lastUpdateRef.current = now;
-      if (mh > 0) {
+      if (mh >= 0) {
         setMeasuredHashrate(mh > 1000 ? `${(mh / 1000).toFixed(1)} GH/s` : `${mh.toFixed(1)} MH/s`);
         if (engine) setHashrateEngine(engine);
       }
@@ -166,12 +161,10 @@ export default function Dashboard() {
             value={isMining && measuredHashrate ? measuredHashrate : stats.localHashrate}
             subValue={
               isMining && measuredHashrate
-                ? hashrateEngine === 'CUDA'
-                  ? 'MEASURED (CUDA LIVE)'
-                  : 'SIMULATED (WEB FALLBACK)'
+                ? 'MEASURED (CUDA LIVE)'
                 : 'ESTIMATED'
             }
-            badgeType={isMining && measuredHashrate ? (hashrateEngine === 'CUDA' ? 'cuda' : 'fallback') : undefined}
+            badgeType={isMining && measuredHashrate ? 'cuda' : undefined}
             icon={Cpu}
             trend={0.5}
             live={isMining}

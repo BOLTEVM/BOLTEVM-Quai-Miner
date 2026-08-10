@@ -13,7 +13,7 @@ interface Log {
 
 interface MiningConsoleProps {
   onBlockFound?: () => void;
-  onHashrateUpdate?: (mh: number, engine?: 'CUDA' | 'WEB_FALLBACK') => void;
+  onHashrateUpdate?: (mh: number, engine?: 'CUDA') => void;
   onShareAccepted?: (shareInfo?: { nonce?: string; difficulty?: number }) => void;
 }
 
@@ -21,20 +21,36 @@ export default function MiningConsole({ onBlockFound, onHashrateUpdate, onShareA
   const [logs, setLogs] = useState<Log[]>([]);
   const [activePool, setActivePool] = useState('cyprus1.rpc.quai.network');
   const [isWorkerActive, setIsWorkerActive] = useState(false);
-  // Use a ref so the cleanup closure always holds the live worker instance
   const workerRef = useRef<Worker | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const logId = useRef(0);
 
   const addLog = (message: string, type: Log['type'] = 'info') => {
     const timestamp = new Date().toLocaleTimeString('en-US', { hour12: false });
-    const newLog: Log = {
-      id: logId.current++,
-      message,
-      type,
-      timestamp
-    };
-    setLogs(prev => [...prev.slice(-99), newLog]); // Keep last 100 logs
+    
+    setLogs(prev => {
+      if (prev.length > 0) {
+        const lastLog = prev[prev.length - 1];
+        const baseLastMsg = lastLog.message.replace(/\s*\(\s*x\d+\s*\)$/, '');
+        if (baseLastMsg === message) {
+          const match = lastLog.message.match(/\(\s*x(\d+)\s*\)$/);
+          const count = match ? parseInt(match[1], 10) + 1 : 2;
+          const updatedLastLog: Log = {
+            ...lastLog,
+            message: `${baseLastMsg} (x${count})`,
+            timestamp
+          };
+          return [...prev.slice(0, -1), updatedLastLog];
+        }
+      }
+      const newLog: Log = {
+        id: logId.current++,
+        message,
+        type,
+        timestamp
+      };
+      return [...prev.slice(-99), newLog]; // Keep last 100 logs
+    });
   };
 
   useEffect(() => {
@@ -66,12 +82,10 @@ export default function MiningConsole({ onBlockFound, onHashrateUpdate, onShareA
     addLog(`Mining Intensity Profile: ${intensity}`, 'info');
 
     if (isMiningActive) {
-      addLog('Starting Hashing Worker Thread...', 'info');
+      addLog('Starting Hardware Hashing Worker Thread...', 'info');
       
-      // Start Real/Telemetry Hashing Worker
       const minerWorker = new Worker(new URL('../workers/miner.worker.ts', import.meta.url));
       
-      // Send FULL payload required by worker and daemon
       minerWorker.postMessage({
         type: 'START',
         intensity,
@@ -84,7 +98,7 @@ export default function MiningConsole({ onBlockFound, onHashrateUpdate, onShareA
       });
 
       minerWorker.onmessage = (e) => {
-        const { type, message, logType, hashrate, lastHash, proof, nonce } = e.data;
+        const { type, message, logType, hashrate, proof, nonce } = e.data;
 
         if (type === 'LOG') {
           addLog(message, logType || 'info');
@@ -94,16 +108,12 @@ export default function MiningConsole({ onBlockFound, onHashrateUpdate, onShareA
             onShareAccepted({ nonce, difficulty: e.data.difficulty || 0.048 });
           }
         } else if (type === 'PROGRESS') {
-          const formattedHr = hashrate >= 1000 ? `${(hashrate / 1000).toFixed(2)} GH/s` : `${hashrate.toFixed(2)} MH/s`;
-          const hashDisplay = lastHash ? (lastHash.startsWith('0x') ? lastHash : `0x${lastHash}`) : 'Active';
-          const engineLabel = e.data.engine === 'CUDA' ? '[CUDA Live]' : '[Web Fallback]';
-          addLog(`[Telemetry ${engineLabel}] Speed: ${formattedHr} | Status: ${hashDisplay}`, 'info');
-          if (onHashrateUpdate) onHashrateUpdate(hashrate, e.data.engine || 'WEB_FALLBACK');
+          if (onHashrateUpdate) onHashrateUpdate(hashrate, 'CUDA');
         } else if (type === 'FOUND_BLOCK') {
-          addLog(`REAL Block Solution Accepted! Proof: ${proof ? proof.substring(0, 24) : ''}...`, 'success');
+          addLog(`[BLOCK SOLUTION] Real Block Solution Accepted! Proof: ${proof ? proof.substring(0, 24) : ''}...`, 'success');
           if (onBlockFound) onBlockFound();
-        } else if (type === 'ERROR') {
-          addLog(`[Daemon Error] ${message}`, 'error');
+        } else if (type === 'ERROR' || type === 'POOL_OFFLINE') {
+          addLog(`[Daemon Connection Issue] ${message}`, 'error');
         }
       };
 
