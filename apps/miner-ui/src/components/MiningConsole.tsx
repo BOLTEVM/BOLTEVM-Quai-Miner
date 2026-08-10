@@ -33,7 +33,7 @@ export default function MiningConsole({ onBlockFound, onHashrateUpdate }: Mining
       type,
       timestamp
     };
-    setLogs(prev => [...prev.slice(-49), newLog]); // Keep last 50 logs
+    setLogs(prev => [...prev.slice(-99), newLog]); // Keep last 100 logs
   };
 
   useEffect(() => {
@@ -71,22 +71,42 @@ export default function MiningConsole({ onBlockFound, onHashrateUpdate }: Mining
     addLog('Auth check complete. Worker: bolt-worker-16', 'success');
 
     if (isMiningActive) {
-      addLog(`Hardware Pipeline Initialized. Intensity: ${intensity}`, 'success');
+      addLog(`Hardware Pipeline Initialized. Profile: ${parsedState.profile || 'balanced'} | Mode: ${parsedState.mode || 'gpu'}`, 'success');
 
-      // Start Real Hashing Worker (stored in ref so cleanup always has the live instance)
+      // Start Real/Telemetry Hashing Worker
       const minerWorker = new Worker(new URL('../workers/miner.worker.ts', import.meta.url));
-      minerWorker.postMessage({ type: 'START', intensity, wallet: JSON.parse(storedState || '{}').wallet });
+      
+      // Send FULL payload required by worker and daemon
+      minerWorker.postMessage({
+        type: 'START',
+        intensity,
+        wallet: parsedState.wallet,
+        mode: parsedState.mode || 'gpu',
+        gpus: parsedState.gpus || [],
+        cpu: parsedState.cpu || null,
+        profile: parsedState.profile || 'balanced',
+        stratum: poolUrl
+      });
 
       minerWorker.onmessage = (e) => {
-        const { type, hashrate, lastHash, proof } = e.data;
-        if (type === 'PROGRESS') {
-          addLog(`Computed Proof of Entropy: 0x${lastHash}... [OK]`, 'info');
+        const { type, message, logType, hashrate, lastHash, proof, nonce } = e.data;
+
+        if (type === 'LOG') {
+          addLog(message, logType || 'info');
+        } else if (type === 'SHARE_ACCEPTED') {
+          addLog(message || `Share Accepted! Nonce: ${nonce || '0x...'}`, 'success');
+        } else if (type === 'PROGRESS') {
+          const formattedHr = hashrate >= 1000 ? `${(hashrate / 1000).toFixed(2)} GH/s` : `${hashrate.toFixed(2)} MH/s`;
+          addLog(`[Telemetry] Speed: ${formattedHr} | Entropy Hash: 0x${lastHash || '...'}`, 'info');
           if (onHashrateUpdate) onHashrateUpdate(hashrate);
         } else if (type === 'FOUND_BLOCK') {
-          addLog(`REAL Block Solution Accepted! Proof: ${proof.substring(0, 16)}...`, 'success');
+          addLog(`REAL Block Solution Accepted! Proof: ${proof ? proof.substring(0, 24) : ''}...`, 'success');
           if (onBlockFound) onBlockFound();
+        } else if (type === 'ERROR') {
+          addLog(`[Daemon Error] ${message}`, 'error');
         }
       };
+
       workerRef.current = minerWorker;
       setIsWorkerActive(true);
     } else {

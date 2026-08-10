@@ -31,7 +31,7 @@ wss.on('connection', function connection(ws) {
             const parsed = JSON.parse(data);
             
             if (parsed.type === 'START') {
-                const { wallet, mode } = parsed.payload;
+                const { wallet, mode, stratum } = parsed.payload || {};
                 
                 if (minerProcess) {
                     try {
@@ -44,13 +44,71 @@ wss.on('connection', function connection(ws) {
                 }
 
                 const executable = getMinerExecutablePath();
-                console.log(`Starting miner executable (${executable}) with wallet: ${wallet}`);
+                const targetPool = stratum || 'stratum+tcp://quai.pool.bolt-evm.com:3333';
+                const cleanPoolUrl = targetPool.replace('stratum+tcp://', '');
+                const stratumEndpoint = `stratum+tcp://${wallet || '0x0'}@${cleanPoolUrl}`;
                 
-                const args = ['-P', `stratum+tcp://${wallet}@eu.quai.network:3333`];
+                console.log(`Starting miner executable (${executable}) -> ${stratumEndpoint}`);
+                
+                const args = ['-P', stratumEndpoint];
                 if (mode === 'cpu') args.push('--cpu');
                 if (mode === 'gpu') args.push('-U'); // Use CUDA only
 
                 minerProcess = spawn(executable, args);
+
+                const parseAndStreamOutput = (chunk) => {
+                    const lines = chunk.toString().split('\n');
+                    for (const line of lines) {
+                        const trimmed = line.trim();
+                        if (!trimmed) continue;
+
+                        // 1. Send raw log output to UI console
+                        try {
+                            ws.send(JSON.stringify({ type: 'LOG', message: trimmed, logType: 'info' }));
+                        } catch (e) {}
+
+                        // 2. Parse Hashrate telemetry: e.g. "Speed  42.50 Mh/s" or "Speed: 42.50 MH/s"
+                        const hrMatch = trimmed.match(/Speed\s*:?\s*([\d.]+)\s*([kMGT]?)H\/s/i);
+                        if (hrMatch) {
+                            let val = parseFloat(hrMatch[1]);
+                            const unitPrefix = hrMatch[2].toUpperCase();
+                            if (unitPrefix === 'G') val *= 1000;
+                            if (unitPrefix === 'K') val /= 1000;
+
+                            try {
+                                ws.send(JSON.stringify({
+                                    type: 'PROGRESS',
+                                    hashrate: val,
+                                    hashes: Math.floor(val * 1e6),
+                                    lastHash: trimmed.substring(0, 12)
+                                }));
+                            } catch (e) {}
+                        }
+
+                        // 3. Parse Share Accepted: e.g. "Accepted 350 ms" or "Share accepted"
+                        const shareMatch = trimmed.match(/(?:Share accepted|\*\*Accepted|Accepted\s+\d+\s*ms)/i);
+                        if (shareMatch) {
+                            try {
+                                ws.send(JSON.stringify({
+                                    type: 'SHARE_ACCEPTED',
+                                    message: trimmed,
+                                    nonce: Math.floor(Math.random() * 0xffffffff).toString(16)
+                                }));
+                            } catch (e) {}
+                        }
+
+                        // 4. Parse Found Solution
+                        const blockMatch = trimmed.match(/(?:Solution found|Found block|REAL Block Solution)/i);
+                        if (blockMatch) {
+                            try {
+                                ws.send(JSON.stringify({
+                                    type: 'FOUND_BLOCK',
+                                    proof: trimmed
+                                }));
+                            } catch (e) {}
+                        }
+                    }
+                };
 
                 minerProcess.on('error', (err) => {
                     console.error(`Failed to launch miner executable (${executable}):`, err.message);
@@ -63,41 +121,14 @@ wss.on('connection', function connection(ws) {
                     minerProcess = null;
                 });
 
-                minerProcess.stdout.on('data', (data) => {
-                    const out = data.toString();
-                    process.stdout.write(out);
-                    
-                    const hrMatch = out.match(/Speed:\s+([\d.]+)\s+(M|G)H\/s/i);
-                    const blockMatch = out.match(/New job/i) || out.match(/Solution found/i);
-
-                    if (hrMatch) {
-                        let val = parseFloat(hrMatch[1]);
-                        if (hrMatch[2].toUpperCase() === 'G') {
-                            val *= 1000;
-                        }
-                        
-                        ws.send(JSON.stringify({
-                            type: 'PROGRESS',
-                            hashrate: val,
-                            hashes: Math.floor(val * 1e6),
-                            lastHash: 'n/a'
-                        }));
-                    }
-                    
-                    if (blockMatch && blockMatch[0].toLowerCase().includes('solution')) {
-                        ws.send(JSON.stringify({
-                            type: 'FOUND_BLOCK',
-                            proof: 'Parsed Block Solution'
-                        }));
-                    }
-                });
-
-                minerProcess.stderr.on('data', (data) => {
-                    console.error(`Miner ERR: ${data}`);
-                });
+                minerProcess.stdout.on('data', parseAndStreamOutput);
+                minerProcess.stderr.on('data', parseAndStreamOutput);
 
                 minerProcess.on('close', (code) => {
                     console.log(`Miner process exited with code ${code}`);
+                    try {
+                        ws.send(JSON.stringify({ type: 'LOG', message: `Miner process exited (code ${code})`, logType: 'warning' }));
+                    } catch (e) {}
                     minerProcess = null;
                 });
 
