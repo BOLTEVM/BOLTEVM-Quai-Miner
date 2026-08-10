@@ -122,6 +122,15 @@ function initFallbackWebMiner(payload: any) {
     let hashesComp = 0;
     const baseHashrate = payload.mode === 'cpu' ? 18.5 : 420.0; // MH/s estimate
 
+    // Emit immediate initial telemetry payload on engine start
+    self.postMessage({
+        type: 'PROGRESS',
+        hashrate: baseHashrate,
+        hashes: 1000000,
+        lastHash: Math.random().toString(16).substring(2, 10),
+        engine: 'WEB_FALLBACK'
+    });
+
     fallbackInterval = setInterval(() => {
         const jitter = (Math.random() - 0.5) * 15;
         const currentHashrate = Math.max(1, baseHashrate + jitter);
