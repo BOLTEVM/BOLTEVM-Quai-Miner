@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Cpu, CheckCircle, Rocket, ShieldCheck, Zap, Database, Terminal, Loader2, Globe } from 'lucide-react';
+import { validateQuaiWallet, normalizeQuaiAddress } from '../utils/walletValidation';
 
 const steps = [
     { id: 1, title: 'Hardware Detection', icon: Cpu },
@@ -486,7 +487,16 @@ export default function SetupWizard() {
                                 onChange={(e) => setWallet(e.target.value)}
                                 className="glass-input"
                             />
-                            <p className="input-hint">Ensure this is a Cyprus-1 address (e.g. starts with 0x00... through 0x0D...)</p>
+                            {(() => {
+                                const valResult = validateQuaiWallet(wallet);
+                                return valResult.valid ? (
+                                    <p className="input-hint" style={{ color: '#00ff7f' }}>✓ Valid Cyprus-1 Zone Quai Address</p>
+                                ) : (
+                                    <p className="input-hint" style={{ color: wallet.length > 0 ? '#ff453a' : 'var(--text-secondary)' }}>
+                                        {valResult.error || 'Ensure this is a Cyprus-1 address (starts with 0x00... through 0x0D...)'}
+                                    </p>
+                                );
+                            })()}
                         </div>
 
                         <div className="actions">
@@ -494,12 +504,7 @@ export default function SetupWizard() {
                             <button
                                 className="btn-primary"
                                 onClick={nextStep}
-                                disabled={(() => {
-                                    if (!wallet || wallet.length < 42) return true;
-                                    if (!wallet.startsWith('0x')) return true;
-                                    if (!/^0x[0-9a-fA-F]{40}$/.test(wallet)) return true;
-                                    return false;
-                                })()}
+                                disabled={!validateQuaiWallet(wallet).valid}
                             >
                                 Finalize Configuration
                             </button>
@@ -513,7 +518,7 @@ export default function SetupWizard() {
                         <h2>Ready to Launch!</h2>
                         <p>Your miner is optimized, synchronized, and rewards are set.</p>
                         <div className="summary-box">
-                            <div className="s-row"><span>Wallet</span> <span className="truncate">{wallet}</span></div>
+                            <div className="s-row"><span>Wallet</span> <span className="truncate">{normalizeQuaiAddress(wallet)}</span></div>
                             <div className="s-row"><span>Mode</span> <span className="capitalize">{miningMode} Mining</span></div>
                             {(miningMode === 'gpu' || miningMode === 'dual') && (
                                 <div className="s-row"><span>GPUs</span> <span style={{ textAlign: 'right' }}>{gpus.map(g => typeof g === 'string' ? g : (g as any)?.name || 'NVIDIA GPU').join(', ')}</span></div>
@@ -526,10 +531,11 @@ export default function SetupWizard() {
                             <div className="s-row"><span>Pool</span> <span>{pools.find(p => p.id === selectedPool)?.name}</span></div>
                         </div>
                         <button className="btn-primary large" onClick={() => {
+                            const cleanWallet = normalizeQuaiAddress(wallet);
                             localStorage.setItem('miner_state', JSON.stringify({
                                 active: true,
                                 mode: miningMode,
-                                wallet: wallet,
+                                wallet: cleanWallet,
                                 profile: profile,
                                 gpus: gpus,
                                 cpu: cpu,

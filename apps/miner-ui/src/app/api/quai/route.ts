@@ -12,7 +12,11 @@ export async function GET(request: Request) {
 
     const defaultResponse = {
         networkHashrate: '185.0 GH/s',
-        totalPaid: '0.0000 QUAI'
+        totalPaid: '0.0000 QUAI',
+        unpaidBalance: '0.0000 QUAI',
+        payoutThreshold: '10.00 QUAI',
+        blockHeight: 1042500,
+        transactions: []
     };
 
     if (!address || !address.trim() || address === 'undefined') {
@@ -23,32 +27,59 @@ export async function GET(request: Request) {
 
     for (const rpcUrl of RPC_ENDPOINTS) {
         try {
-            const res = await fetch(rpcUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    jsonrpc: '2.0',
-                    method: 'quai_getBalance',
-                    params: [cleanAddress, 'latest'],
-                    id: 1
-                }),
-                signal: AbortSignal.timeout(3000)
-            });
+            const [balanceRes, blockRes] = await Promise.all([
+                fetch(rpcUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        jsonrpc: '2.0',
+                        method: 'quai_getBalance',
+                        params: [cleanAddress, 'latest'],
+                        id: 1
+                    }),
+                    signal: AbortSignal.timeout(3000)
+                }).catch(() => null),
+                fetch(rpcUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        jsonrpc: '2.0',
+                        method: 'quai_blockNumber',
+                        params: [],
+                        id: 2
+                    }),
+                    signal: AbortSignal.timeout(3000)
+                }).catch(() => null)
+            ]);
 
-            if (!res.ok) continue;
+            if (!balanceRes || !balanceRes.ok) continue;
 
-            const data = await res.json();
-            if (data.error || data.result === undefined) continue;
+            const balanceData = await balanceRes.json();
+            if (balanceData.error || balanceData.result === undefined) continue;
 
-            const balanceWei = BigInt(data.result || '0');
+            const balanceWei = BigInt(balanceData.result || '0');
             const balanceQuai = (Number(balanceWei) / 1e18).toFixed(4);
+
+            let blockHeight = 1042500;
+            if (blockRes && blockRes.ok) {
+                try {
+                    const blockData = await blockRes.json();
+                    if (blockData.result) {
+                        blockHeight = parseInt(blockData.result, 16);
+                    }
+                } catch (e) {}
+            }
 
             return NextResponse.json({
                 networkHashrate: '185.0 GH/s',
-                totalPaid: `${balanceQuai} QUAI`
+                totalPaid: `${balanceQuai} QUAI`,
+                unpaidBalance: '0.0000 QUAI',
+                payoutThreshold: '10.00 QUAI',
+                blockHeight,
+                transactions: []
             });
         } catch (e) {
-            // Fallback to next endpoint in RPC_ENDPOINTS
+            // Fallback to next endpoint
         }
     }
 

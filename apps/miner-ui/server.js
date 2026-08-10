@@ -46,8 +46,9 @@ wss.on('connection', function connection(ws) {
                 const executable = getMinerExecutablePath();
                 const targetPool = stratum || 'stratum+tcp://quai.pool.bolt-evm.com:3333';
                 const cleanPoolUrl = targetPool.replace(/^(?:stratum\+(?:tcp|ssl|tls):\/\/)?/, '');
-                const payoutWallet = (wallet && wallet.startsWith('0x') && wallet.length >= 42) ? wallet : '0x0000000000000000000000000000000000000000';
-                const stratumEndpoint = `stratum+tcp://${payoutWallet}@${cleanPoolUrl}`;
+                const cleanWallet = (wallet && wallet.startsWith('0x') && wallet.length >= 42) ? wallet.trim().toLowerCase() : '0x0000000000000000000000000000000000000000';
+                const cleanWorkerId = (parsed.workerId || 'bolt-worker-1').trim().replace(/[^a-zA-Z0-9_-]/g, '');
+                const stratumEndpoint = `stratum+tcp://${cleanWallet}.${cleanWorkerId}@${cleanPoolUrl}`;
                 
                 console.log(`Starting miner executable (${executable}) -> ${stratumEndpoint} (mode: ${mode})`);
                 

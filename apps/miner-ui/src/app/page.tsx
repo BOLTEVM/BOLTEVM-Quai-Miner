@@ -9,6 +9,7 @@ import MiningConsole from '../components/MiningConsole'
 import MinerInstructions from '../components/MinerInstructions'
 import { Cpu, Activity, Database, Globe, Zap } from 'lucide-react'
 import { estimateHashrate, convertToMHs, formatMHsTotal } from '../utils/hashrate'
+import { getStoredSessionRewards, recordAcceptedShare, recordBlockFound } from '../utils/sessionRewards'
 
 export default function Dashboard() {
   const router = useRouter();
@@ -21,6 +22,12 @@ export default function Dashboard() {
   const [sessionRewards, setSessionRewards] = useState(0);
   const [acceptedShares, setAcceptedShares] = useState(0);
   const [isMining, setIsMining] = useState(false);
+
+  useEffect(() => {
+    const storedRewards = getStoredSessionRewards();
+    setSessionRewards(storedRewards.sessionRewards);
+    setAcceptedShares(storedRewards.acceptedShares);
+  }, []);
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -87,13 +94,14 @@ export default function Dashboard() {
   }, []);
 
   const handleBlockFound = () => {
-    // Standard Quai Cyprus-1 block reward estimation
-    setSessionRewards(prev => prev + 2.5);
+    const updated = recordBlockFound(2.5);
+    setSessionRewards(updated.sessionRewards);
   };
 
   const handleShareAccepted = useCallback(() => {
-    setAcceptedShares(prev => prev + 1);
-    setSessionRewards(prev => prev + 0.05);
+    const updated = recordAcceptedShare(0.05);
+    setSessionRewards(updated.sessionRewards);
+    setAcceptedShares(updated.acceptedShares);
   }, []);
 
   const [measuredHashrate, setMeasuredHashrate] = useState<string | null>(null);
