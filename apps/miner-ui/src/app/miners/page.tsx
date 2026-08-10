@@ -53,7 +53,9 @@ export default function MinersPage() {
     if (stored) {
       try {
         const parsed = JSON.parse(stored);
-        if (parsed.wallet) setWallet(parsed.wallet);
+        if (parsed && typeof parsed === 'object' && parsed.wallet) {
+          setWallet(parsed.wallet);
+        }
       } catch (e) {}
     }
   }, []);
@@ -82,7 +84,12 @@ export default function MinersPage() {
     const stored = localStorage.getItem('miner_state');
     let currentState: any = { active: true, mode: 'dual', gpus: [], customWorkers: [] };
     if (stored) {
-      try { currentState = JSON.parse(stored); } catch (e) {}
+      try {
+        const parsed = JSON.parse(stored);
+        if (parsed && typeof parsed === 'object') {
+          currentState = parsed;
+        }
+      } catch (e) {}
     }
 
     const existingWorkers: WorkerItem[] = currentState.customWorkers || [];

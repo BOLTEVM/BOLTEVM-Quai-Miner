@@ -153,9 +153,14 @@ wss.on('connection', function connection(ws) {
 
                 minerProcess.on('close', (code) => {
                     console.log(`Miner process exited with code ${code}`);
-                    try {
-                        ws.send(JSON.stringify({ type: 'LOG', message: `Miner process exited (code ${code})`, logType: 'warning' }));
-                    } catch (e) {}
+                    if (code !== 0 && code !== null) {
+                        broadcast({
+                            type: 'ERROR',
+                            message: `Native miner process exited (code ${code}). Engaging Web Worker engine...`
+                        });
+                    } else {
+                        broadcast({ type: 'LOG', message: `Miner process exited (code ${code})`, logType: 'warning' });
+                    }
                     minerProcess = null;
                 });
 

@@ -4,27 +4,48 @@ import { useState, useEffect } from 'react'
 import Sidebar from '../../components/Sidebar'
 import { Wallet, ArrowDownRight, Zap } from 'lucide-react'
 
+const DEFAULT_REWARDS = {
+    networkHashrate: '185.0 GH/s',
+    totalPaid: '0.0000 QUAI',
+    unpaidBalance: '0.0000 QUAI',
+    payoutThreshold: '10.00 QUAI',
+    blockHeight: 1042500,
+    transactions: []
+};
+
 export default function RewardsPage() {
     const [rewardsData, setRewardsData] = useState<any>(null);
     const [wallet, setWallet] = useState<string | null>(null);
 
     useEffect(() => {
+        let activeWallet = '';
         const storedState = localStorage.getItem('miner_state');
         if (storedState) {
-            const state = JSON.parse(storedState);
-            setWallet(state.wallet);
-
-            const fetchData = async () => {
-                try {
-                    const response = await fetch(`/api/quai?address=${state.wallet}`);
-                    const data = await response.json();
-                    setRewardsData(data);
-                } catch (e) {
-                    console.error('Failed to fetch rewards:', e);
+            try {
+                const state = JSON.parse(storedState);
+                if (state && typeof state === 'object' && state.wallet) {
+                    activeWallet = state.wallet;
+                    setWallet(state.wallet);
                 }
-            };
-            fetchData();
+            } catch (e) {}
         }
+
+        const fetchData = async () => {
+            try {
+                const response = await fetch(`/api/quai?address=${encodeURIComponent(activeWallet)}`);
+                if (!response.ok) {
+                    setRewardsData(DEFAULT_REWARDS);
+                    return;
+                }
+                const data = await response.json();
+                setRewardsData(data || DEFAULT_REWARDS);
+            } catch (e) {
+                console.error('Failed to fetch rewards:', e);
+                setRewardsData(DEFAULT_REWARDS);
+            }
+        };
+
+        fetchData();
     }, []);
 
     if (!rewardsData) {
@@ -41,19 +62,21 @@ export default function RewardsPage() {
         );
     }
 
+    const transactions = Array.isArray(rewardsData.transactions) ? rewardsData.transactions : [];
+
     return (
         <div className="page-container">
             <Sidebar />
             <main className="main-content">
                 <header className="page-header">
                     <h1>Rewards & Payouts</h1>
-                    <p>Track your mining earnings for <span className="wallet-span">{wallet}</span></p>
+                    <p>Track your mining earnings for <span className="wallet-span">{wallet || 'No wallet configured'}</span></p>
                 </header>
 
                 <section className="rewards-summary">
                     <div className="glass-card summary-item">
                         <span className="label">Unpaid Balance</span>
-                        <h2 className="glow-text">{rewardsData.unpaidBalance}</h2>
+                        <h2 className="glow-text">{rewardsData.unpaidBalance ?? '0.0000 QUAI'}</h2>
                         <button
                             className="btn-primary small"
                             disabled={true}
@@ -61,27 +84,27 @@ export default function RewardsPage() {
                     </div>
                     <div className="glass-card summary-item">
                         <span className="label">Total Paid (Protocol Balance)</span>
-                        <h2>{rewardsData.totalPaid}</h2>
+                        <h2>{rewardsData.totalPaid ?? '0.0000 QUAI'}</h2>
                     </div>
                     <div className="glass-card summary-item">
                         <span className="label">Next Payout</span>
-                        <h2>~ {rewardsData.payoutThreshold} (Estimated)</h2>
+                        <h2>~ {rewardsData.payoutThreshold ?? '10.00 QUAI'} (Estimated)</h2>
                     </div>
                 </section>
 
                 <div className="glass-card">
                     <h3>Recent History</h3>
-                    {rewardsData.transactions.length > 0 ? (
+                    {transactions.length > 0 ? (
                         <ul className="reward-list">
-                            {rewardsData.transactions.map((r: any) => (
-                                <li key={r.id}>
+                            {transactions.map((r: any, idx: number) => (
+                                <li key={r.id || idx}>
                                     <div className="reward-icon"><ArrowDownRight size={18} /></div>
                                     <div className="reward-info">
-                                        <span className="reward-type">{r.type}</span>
-                                        <span className="reward-date">{r.date}</span>
+                                        <span className="reward-type">{r.type || 'Mining Reward'}</span>
+                                        <span className="reward-date">{r.date || 'Recent'}</span>
                                     </div>
-                                    <div className="reward-amount">{r.amount}</div>
-                                    <div className="reward-status">{r.status}</div>
+                                    <div className="reward-amount">{r.amount || '0.00 QUAI'}</div>
+                                    <div className="reward-status">{r.status || 'Confirmed'}</div>
                                 </li>
                             ))}
                         </ul>

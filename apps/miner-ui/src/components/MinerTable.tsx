@@ -56,6 +56,8 @@ export default function MinerTable({ refreshTrigger, onToast }: MinerTableProps)
     if (storedState) {
       try {
         const state = JSON.parse(storedState);
+        if (!state || typeof state !== 'object') return;
+
         const items: WorkerItem[] = [];
 
         if (state.customWorkers && Array.isArray(state.customWorkers) && state.customWorkers.length > 0) {
@@ -70,24 +72,25 @@ export default function MinerTable({ refreshTrigger, onToast }: MinerTableProps)
 
         if (state.active) {
           if (state.mode === 'gpu' || state.mode === 'dual') {
-            (state.gpus || []).forEach((gpu: string, i: number) => {
-              const estimation = estimateHashrate(gpu, 'gpu');
+            (state.gpus || []).forEach((gpu: any, i: number) => {
+              const gpuName = typeof gpu === 'string' ? gpu : (gpu?.name || 'NVIDIA GPU');
+              const estimation = estimateHashrate(gpuName, 'gpu');
               items.push({
                 id: `BOLT-GPU-${i + 1}`,
-                type: gpu,
+                type: gpuName,
                 hardwareCategory: 'gpu',
                 hashrate: formatHashrate(estimation.value, estimation.unit),
                 numericHashrate: estimation.value,
                 temp: fetchedTemps[`gpu_${i}`] || '62°C',
                 status: 'Online',
-                targetPool: state.stratum || 'stratum+tcp://quai.pool.bolt-evm.com:3333',
+                targetPool: state.stratum || 'stratum+tcp://quai-kawpow.kryptex.network:7043',
                 intensity: state.intensity || 'Medium (Standard)'
               });
             });
           }
 
           if (state.mode === 'cpu' || state.mode === 'dual') {
-            const cpuName = state.cpu?.name || 'Generic CPU';
+            const cpuName = typeof state.cpu === 'string' ? state.cpu : (state.cpu?.name || 'Generic CPU');
             const estimation = estimateHashrate(cpuName, 'cpu');
             items.push({
               id: 'BOLT-CPU-01',
@@ -97,7 +100,7 @@ export default function MinerTable({ refreshTrigger, onToast }: MinerTableProps)
               numericHashrate: estimation.value,
               temp: fetchedTemps['cpu'] || '51°C',
               status: 'Online',
-              targetPool: state.stratum || 'stratum+tcp://quai.pool.bolt-evm.com:3333',
+              targetPool: state.stratum || 'stratum+tcp://quai-kawpow.kryptex.network:7043',
               intensity: state.intensity || 'Medium (Standard)'
             });
           }
@@ -121,7 +124,7 @@ export default function MinerTable({ refreshTrigger, onToast }: MinerTableProps)
         try {
           const data = JSON.parse(event.data);
           if (data.type === 'PROGRESS' && data.hashrate) {
-            setWorkers(prev => prev.map(w => {
+            setWorkers(prev => (prev || []).map(w => {
               if (w.status === 'Online') {
                 const liveHr = data.hashrate;
                 return {
@@ -133,7 +136,7 @@ export default function MinerTable({ refreshTrigger, onToast }: MinerTableProps)
               return w;
             }));
           } else if (data.type === 'REBOOT_COMPLETE' && data.targetWorker) {
-            setWorkers(prev => prev.map(w => w.id === data.targetWorker ? { ...w, status: 'Online' } : w));
+            setWorkers(prev => (prev || []).map(w => w.id === data.targetWorker ? { ...w, status: 'Online' } : w));
             onToast?.(`Worker ${data.targetWorker} reboot sequence completed.`, 'success');
           }
         } catch (e) {}
