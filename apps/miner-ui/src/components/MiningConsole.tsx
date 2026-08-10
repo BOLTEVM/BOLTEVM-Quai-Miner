@@ -38,28 +38,31 @@ export default function MiningConsole({ onBlockFound, onHashrateUpdate }: Mining
 
   useEffect(() => {
     const storedState = localStorage.getItem('miner_state');
+    let parsedState: any = {};
     let totalMHs = 0;
     let poolUrl = 'stratum+tcp://quai.pool.bolt-evm.com:3333';
     let intensity = 'Medium (Standard)';
     let isMiningActive = false;
 
     if (storedState) {
-      const state = JSON.parse(storedState);
-      if (state.stratum) poolUrl = state.stratum;
-      if (state.intensity) intensity = state.intensity;
-      isMiningActive = state.active;
+      try {
+        parsedState = JSON.parse(storedState);
+      } catch (e) {}
+      if (parsedState.stratum) poolUrl = parsedState.stratum;
+      if (parsedState.intensity) intensity = parsedState.intensity;
+      isMiningActive = parsedState.active;
 
       setActivePool(poolUrl.replace('stratum+tcp://', ''));
 
       if (isMiningActive) {
-        if (state.mode === 'gpu' || state.mode === 'dual') {
-          state.gpus.forEach((gpu: string) => {
+        if (parsedState.mode === 'gpu' || parsedState.mode === 'dual') {
+          (parsedState.gpus || []).forEach((gpu: string) => {
             const est = estimateHashrate(gpu, 'gpu');
             totalMHs += convertToMHs(est.value, est.unit);
           });
         }
-        if (state.mode === 'cpu' || state.mode === 'dual') {
-          const est = estimateHashrate(state.cpu?.name || '', 'cpu');
+        if (parsedState.mode === 'cpu' || parsedState.mode === 'dual') {
+          const est = estimateHashrate(parsedState.cpu?.name || '', 'cpu');
           totalMHs += convertToMHs(est.value, est.unit);
         }
       }
