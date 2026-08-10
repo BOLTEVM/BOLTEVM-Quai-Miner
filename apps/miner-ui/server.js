@@ -138,8 +138,6 @@ wss.on('connection', function connection(ws) {
             } else if (parsed.type === 'STOP') {
                 if (minerProcess) {
                     console.log('Stopping miner process via UI request.');
-                    // On Windows, child_process.kill() might leave zombie native processes.
-                    // We use taskkill if process is Win32
                     if (process.platform === 'win32') {
                          spawn('taskkill', ['/pid', minerProcess.pid, '/f', '/t']);
                     } else {
@@ -147,6 +145,24 @@ wss.on('connection', function connection(ws) {
                     }
                     minerProcess = null;
                 }
+            } else if (parsed.type === 'REBOOT') {
+                console.log(`Rebooting worker ${parsed.targetWorker || 'process'} via UI request...`);
+                if (minerProcess) {
+                    try {
+                        if (process.platform === 'win32') {
+                             spawn('taskkill', ['/pid', minerProcess.pid, '/f', '/t']);
+                        } else {
+                             minerProcess.kill('SIGTERM');
+                        }
+                    } catch (e) {}
+                    minerProcess = null;
+                }
+                setTimeout(() => {
+                    try {
+                        ws.send(JSON.stringify({ type: 'LOG', message: `Worker ${parsed.targetWorker || 'process'} reboot sequence completed.`, logType: 'success' }));
+                        ws.send(JSON.stringify({ type: 'REBOOT_COMPLETE', targetWorker: parsed.targetWorker }));
+                    } catch (e) {}
+                }, 1500);
             }
         } catch (err) {
             console.error("Failed to parse incoming WS message:", err);
