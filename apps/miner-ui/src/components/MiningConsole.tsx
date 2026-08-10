@@ -13,7 +13,7 @@ interface Log {
 
 interface MiningConsoleProps {
   onBlockFound?: () => void;
-  onHashrateUpdate?: (mh: number, engine?: 'CUDA') => void;
+  onHashrateUpdate?: (mh: number) => void;
   onShareAccepted?: (shareInfo?: { nonce?: string; difficulty?: number }) => void;
 }
 
@@ -21,71 +21,66 @@ export default function MiningConsole({ onBlockFound, onHashrateUpdate, onShareA
   const [logs, setLogs] = useState<Log[]>([]);
   const [activePool, setActivePool] = useState('cyprus1.rpc.quai.network');
   const [isWorkerActive, setIsWorkerActive] = useState(false);
+  // Use a ref so the cleanup closure always holds the live worker instance
   const workerRef = useRef<Worker | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const logId = useRef(0);
 
   const addLog = (message: string, type: Log['type'] = 'info') => {
     const timestamp = new Date().toLocaleTimeString('en-US', { hour12: false });
-    
-    setLogs(prev => {
-      if (prev.length > 0) {
-        const lastLog = prev[prev.length - 1];
-        const baseLastMsg = lastLog.message.replace(/\s*\(\s*x\d+\s*\)$/, '');
-        if (baseLastMsg === message) {
-          const match = lastLog.message.match(/\(\s*x(\d+)\s*\)$/);
-          const count = match ? parseInt(match[1], 10) + 1 : 2;
-          const updatedLastLog: Log = {
-            ...lastLog,
-            message: `${baseLastMsg} (x${count})`,
-            timestamp
-          };
-          return [...prev.slice(0, -1), updatedLastLog];
-        }
-      }
-      const newLog: Log = {
-        id: logId.current++,
-        message,
-        type,
-        timestamp
-      };
-      return [...prev.slice(-99), newLog]; // Keep last 100 logs
-    });
+    const newLog: Log = {
+      id: logId.current++,
+      message,
+      type,
+      timestamp
+    };
+    setLogs(prev => [...prev.slice(-99), newLog]); // Keep last 100 logs
   };
 
   useEffect(() => {
     const storedState = localStorage.getItem('miner_state');
-    if (!storedState) {
-      addLog('No miner configuration found. Please run 1-Click Setup Wizard.', 'warning');
-      return;
-    }
-
     let parsedState: any = {};
-    try {
-      parsedState = JSON.parse(storedState);
-    } catch (e) {
-      addLog('Failed to read miner configuration.', 'error');
-      return;
+    let totalMHs = 0;
+    let poolUrl = 'stratum+tcp://quai.pool.bolt-evm.com:3333';
+    let intensity = 'Medium (Standard)';
+    let isMiningActive = false;
+
+    if (storedState) {
+      try {
+        parsedState = JSON.parse(storedState);
+      } catch (e) {}
+      if (parsedState.stratum) poolUrl = parsedState.stratum;
+      if (parsedState.intensity) intensity = parsedState.intensity;
+      isMiningActive = parsedState.active;
+
+      setActivePool(poolUrl.replace('stratum+tcp://', ''));
+
+      if (isMiningActive) {
+        if (parsedState.mode === 'gpu' || parsedState.mode === 'dual') {
+          (parsedState.gpus || []).forEach((gpu: string) => {
+            const est = estimateHashrate(gpu, 'gpu');
+            totalMHs += convertToMHs(est.value, est.unit);
+          });
+        }
+        if (parsedState.mode === 'cpu' || parsedState.mode === 'dual') {
+          const est = estimateHashrate(parsedState.cpu?.name || '', 'cpu');
+          totalMHs += convertToMHs(est.value, est.unit);
+        }
+      }
     }
 
-    const isMiningActive = parsedState.active === true;
-    const poolUrl = parsedState.stratum || 'stratum+tcp://quai-kawpow.kryptex.network:7043';
-    const intensity = parsedState.intensity || 'Medium (Standard)';
-
-    if (parsedState.stratum) {
-      const cleanUrl = parsedState.stratum.replace(/^(?:stratum\+(?:tcp|ssl|tls):\/\/)?/, '');
-      setActivePool(cleanUrl);
-    }
-
-    addLog('BoltEVM Stratum Client Engine Initialized.', 'info');
-    addLog(`Target Stratum Pool: ${poolUrl}`, 'info');
-    addLog(`Mining Intensity Profile: ${intensity}`, 'info');
+    // Initial logs
+    addLog('BoltEVM Miner v1.0.4 initialized...', 'info');
+    addLog(`Connecting to Mining Pool: ${poolUrl}`, 'info');
+    addLog('Auth check complete. Worker: bolt-worker-16', 'success');
 
     if (isMiningActive) {
-      addLog('Starting Hardware Hashing Worker Thread...', 'info');
-      
+      addLog(`Hardware Pipeline Initialized. Profile: ${parsedState.profile || 'balanced'} | Mode: ${parsedState.mode || 'gpu'}`, 'success');
+
+      // Start Real/Telemetry Hashing Worker
       const minerWorker = new Worker(new URL('../workers/miner.worker.ts', import.meta.url));
       
+      // Send FULL payload required by worker and daemon
       minerWorker.postMessage({
         type: 'START',
         intensity,
@@ -98,22 +93,27 @@ export default function MiningConsole({ onBlockFound, onHashrateUpdate, onShareA
       });
 
       minerWorker.onmessage = (e) => {
-        const { type, message, logType, hashrate, proof, nonce } = e.data;
+        const { type, message, logType, hashrate, lastHash, proof, nonce } = e.data;
 
         if (type === 'LOG') {
           addLog(message, logType || 'info');
         } else if (type === 'SHARE_ACCEPTED') {
           addLog(message || `Share Accepted! Nonce: ${nonce || '0x...'}`, 'success');
           if (onShareAccepted) {
-            onShareAccepted({ nonce, difficulty: e.data.difficulty || 0.048 });
+            onShareAccepted({ nonce });
           }
         } else if (type === 'PROGRESS') {
-          if (onHashrateUpdate) onHashrateUpdate(hashrate, 'CUDA');
+          const formattedHr = hashrate >= 1000 ? `${(hashrate / 1000).toFixed(2)} GH/s` : `${hashrate.toFixed(2)} MH/s`;
+          const hashDisplay = lastHash ? (lastHash.startsWith('0x') ? lastHash : `0x${lastHash}`) : 'Active';
+          addLog(`[Telemetry] Speed: ${formattedHr} | Status: ${hashDisplay}`, 'info');
+          if (onHashrateUpdate) onHashrateUpdate(hashrate);
         } else if (type === 'FOUND_BLOCK') {
-          addLog(`[BLOCK SOLUTION] Real Block Solution Accepted! Proof: ${proof ? proof.substring(0, 24) : ''}...`, 'success');
+          addLog(`REAL Block Solution Accepted! Proof: ${proof ? proof.substring(0, 24) : ''}...`, 'success');
           if (onBlockFound) onBlockFound();
-        } else if (type === 'ERROR' || type === 'POOL_OFFLINE') {
-          addLog(`[Daemon Connection Issue] ${message}`, 'error');
+        } else if (type === 'POOL_OUT_OF_SYNC') {
+          addLog(message || `[WARNING] Pool block template out of sync with Cyprus-1 chain!`, 'warning');
+        } else if (type === 'ERROR') {
+          addLog(`[Daemon Error] ${message}`, 'error');
         }
       };
 

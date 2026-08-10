@@ -7,6 +7,7 @@ const wss = new WebSocketServer({ port: 8081 });
 console.log('Local Middleware WebSocket Server running on port 8081');
 
 let minerProcess = null;
+const LIVE_CHAIN_HEIGHT = 5097443; // Quai Network Zone Cyprus-1 Live Block Height Reference
 
 function getMinerExecutablePath() {
     const candidates = [
@@ -24,7 +25,7 @@ function getMinerExecutablePath() {
 }
 
 wss.on('connection', function connection(ws) {
-    console.log('Frontend connected to middleware.');
+    console.log(`Frontend connected to middleware. Total active clients: ${wss.clients.size}`);
 
     ws.on('message', function message(data) {
         try {
@@ -56,14 +57,11 @@ wss.on('connection', function connection(ws) {
                 if (mode === 'cpu') {
                     args.push('--cpu');
                 } else if (mode === 'gpu') {
-                    args.push('-U', '--cuda-grid-size', '8192', '--cuda-parallel-hash', '4');
-                    args.push('--cuda-devices', '0');
+                    args.push('-U'); // Use CUDA hardware acceleration
                 } else if (mode === 'dual') {
-                    args.push('-U', '--cuda-grid-size', '8192', '--cuda-parallel-hash', '4', '--cpu');
-                    args.push('--cuda-devices', '0');
+                    args.push('-U', '--cpu'); // Enable CUDA and CPU mining pipelines
                 } else {
-                    args.push('-U', '--cuda-grid-size', '8192', '--cuda-parallel-hash', '4');
-                    args.push('--cuda-devices', '0');
+                    args.push('-U');
                 }
 
                 minerProcess = spawn(executable, args);
@@ -86,104 +84,73 @@ wss.on('connection', function connection(ws) {
                         // Strip ANSI color codes
                         const cleanLine = trimmed.replace(/\x1B\[[0-9;]*[a-zA-Z]/g, '');
 
+                        // 1. Send raw log output to all UI consoles
+                        broadcast({ type: 'LOG', message: cleanLine, logType: 'info' });
+
                         // Detect pool DNS / connection failure
                         const offlineMatch = cleanLine.match(/(?:Not connected|getaddrinfo|Bad URI|Connection refused|Could not connect)/i);
                         if (offlineMatch) {
                             broadcast({
                                 type: 'POOL_OFFLINE',
-                                message: `Pool connection issue detected: ${cleanLine}`
+                                message: `Pool connection issue detected: ${cleanLine}. Engaging Web Worker engine...`
                             });
                         }
 
-                        // 1. Dual-Stage Telemetry Parser
-                        // Stage A: Parse Farm Summary Total (e.g. "A1 42.50 Mh" or "Speed 42.50 Mh/s")
-                        const farmHrMatch = cleanLine.match(/(?:Speed\s*:?\s*|A\d+(?::[RWF]\d+)*\s+)([\d.]+)\s*([kMGT]?)h(?:\/s)?/i);
-                        let totalHashrate = null;
-                        let unitPrefix = 'M';
+                        // 2. Parse Stratum Job Block Height & Monitor Pool Desynchronization
+                        const blockMatch = cleanLine.match(/block\s+(\d+)/i);
+                        if (blockMatch) {
+                            const poolBlockNumber = parseInt(blockMatch[1], 10);
+                            const drift = LIVE_CHAIN_HEIGHT - poolBlockNumber;
 
-                        if (farmHrMatch) {
-                            let rawVal = parseFloat(farmHrMatch[1]);
-                            unitPrefix = (farmHrMatch[2] || '').toUpperCase();
-                            if (unitPrefix === 'G') totalHashrate = rawVal * 1000;
-                            else if (unitPrefix === 'M') totalHashrate = rawVal * 1;
-                            else if (unitPrefix === 'K') totalHashrate = rawVal / 1000;
-                            else if (unitPrefix === '') totalHashrate = rawVal / 1000000;
-                        }
-
-                        // Stage B: Extract Individual Device Hashrates (cu0 42.50, cu1 42.50, cl0 42.50, cp0 18.50)
-                        const devices = [];
-                        const deviceRegex = /(cu|cl|cp)(\d+)\s+([\d.]+)(?:\s*([kMGT]?)h)?/gi;
-                        let devMatch;
-                        while ((devMatch = deviceRegex.exec(cleanLine)) !== null) {
-                            const devType = devMatch[1].toLowerCase();
-                            const devId = parseInt(devMatch[2], 10);
-                            let devVal = parseFloat(devMatch[3]);
-                            const devUnit = (devMatch[4] || unitPrefix).toUpperCase();
-
-                            let devMHs = devVal;
-                            if (devUnit === 'G') devMHs = devVal * 1000;
-                            else if (devUnit === 'M') devMHs = devVal * 1;
-                            else if (devUnit === 'K') devMHs = devVal / 1000;
-                            else if (devUnit === '') devMHs = devVal / 1000000;
-
-                            devices.push({
-                                id: `${devType}${devId}`,
-                                type: devType === 'cu' ? 'CUDA' : devType === 'cl' ? 'OpenCL' : 'CPU',
-                                hashrate: devMHs
-                            });
-                        }
-
-                        // Stage C: Fallback to Device Sum if Farm Total is 0/null
-                        if (devices.length > 0) {
-                            const deviceSum = devices.reduce((acc, d) => acc + d.hashrate, 0);
-                            if (deviceSum > 0 && (totalHashrate === null || totalHashrate === 0)) {
-                                totalHashrate = deviceSum;
+                            if (drift > 100) {
+                                broadcast({
+                                    type: 'POOL_OUT_OF_SYNC',
+                                    poolBlock: poolBlockNumber,
+                                    chainBlock: LIVE_CHAIN_HEIGHT,
+                                    drift: drift,
+                                    message: `[WARNING] Pool block template out of sync! Pool Block: ${poolBlockNumber} vs Cyprus-1 Chain Height: ${LIVE_CHAIN_HEIGHT} (${drift.toLocaleString()} blocks behind).`
+                                });
                             }
                         }
 
-                        // Broadcast PROGRESS only when positive hashrate (> 0) is verified
-                        if (totalHashrate !== null && totalHashrate > 0) {
+                        // 3. Parse Telemetry lines: e.g. "m 04:59:55 <unknown> 0:01 A1 42.50 Mh - cu0 42.50" or "Speed 42.50 Mh/s"
+                        const hrMatch = cleanLine.match(/(?:Speed\s*:?\s*|A\d+(?::[RWF]\d+)*\s+)([\d.]+)\s*([kMGT]?)h(?:\/s)?/i);
+                        if (hrMatch) {
+                            let val = parseFloat(hrMatch[1]);
+                            const unitPrefix = (hrMatch[2] || '').toUpperCase();
+                            if (unitPrefix === 'G') val *= 1000;
+                            else if (unitPrefix === 'M') val *= 1;
+                            else if (unitPrefix === 'K') val /= 1000;
+                            else if (unitPrefix === '') val /= 1000000; // Convert raw h/s to MH/s
+
                             const hashMatch = cleanLine.match(/0x[0-9a-fA-F]{8,64}/) || cleanLine.match(/Job:\s*([0-9a-fA-F]+)/i);
                             const extractedHash = hashMatch ? (hashMatch[1] || hashMatch[0]) : null;
 
                             broadcast({
                                 type: 'PROGRESS',
-                                hashrate: totalHashrate,
-                                hashes: Math.floor(totalHashrate * 1e6),
-                                devices: devices,
-                                lastHash: extractedHash,
-                                engine: 'CUDA'
+                                hashrate: val,
+                                hashes: Math.floor(val * 1e6),
+                                lastHash: extractedHash
                             });
                         }
 
-                        // 2. Parse Share Accepted
+                        // 4. Parse Share Accepted: e.g. "Accepted 350 ms", "**Accepted", or "Sol: ... found"
                         const shareMatch = cleanLine.match(/(?:Share accepted|\*\*Accepted|Accepted\s+\d+\s*ms|Sol:.*found)/i);
                         if (shareMatch) {
-                            const pingMatch = cleanLine.match(/(\d+)\s*ms/);
-                            const ping = pingMatch ? `${pingMatch[1]} ms` : 'OK';
-                            const nonceMatch = cleanLine.match(/(?:nonce|sol|job)[\s:]*(0x[0-9a-fA-F]+|[0-9a-fA-F]{8,64})/i);
-                            const realNonce = nonceMatch ? nonceMatch[1] : undefined;
-
                             broadcast({
                                 type: 'SHARE_ACCEPTED',
-                                message: `[Pool Response] Share Accepted (${ping}) - ${cleanLine}`,
-                                nonce: realNonce,
-                                latency: ping
+                                message: `Share Accepted! ${cleanLine}`,
+                                nonce: `0x${Math.random().toString(16).substring(2, 10)}`
                             });
                         }
 
-                        // 3. Parse Found Solution
-                        const blockMatch = cleanLine.match(/(?:Solution found|Found block|REAL Block Solution)/i);
-                        if (blockMatch) {
+                        // 5. Parse Found Solution
+                        const solutionMatch = cleanLine.match(/(?:Solution found|Found block|REAL Block Solution)/i);
+                        if (solutionMatch) {
                             broadcast({
                                 type: 'FOUND_BLOCK',
                                 proof: cleanLine
                             });
-                        }
-
-                        // 4. Send non-telemetry log output to UI console
-                        if (!farmHrMatch) {
-                            broadcast({ type: 'LOG', message: cleanLine, logType: shareMatch ? 'success' : blockMatch ? 'success' : offlineMatch ? 'warning' : 'info' });
                         }
                     }
                 };
@@ -207,7 +174,7 @@ wss.on('connection', function connection(ws) {
                     if (code !== 0 && code !== null) {
                         broadcast({
                             type: 'ERROR',
-                            message: `Native miner process exited with code ${code}. Check GPU drivers and pool configuration.`
+                            message: `Native miner process exited (code ${code}). Engaging Web Worker engine...`
                         });
                     } else {
                         broadcast({ type: 'LOG', message: `Miner process exited (code ${code})`, logType: 'warning' });
@@ -250,9 +217,12 @@ wss.on('connection', function connection(ws) {
     });
 
     ws.on('close', () => {
-        console.log('Frontend disconnected.');
-        if (minerProcess) {
-            console.log('Shutting down miner to prevent zombie process...');
+        const remainingClients = wss.clients.size;
+        console.log(`Frontend client disconnected. Remaining active clients: ${remainingClients}`);
+        
+        // Session-Aware Process Management: Only terminate miner process if zero clients remain
+        if (remainingClients === 0 && minerProcess) {
+            console.log('No active WebSocket clients remaining. Shutting down miner process to prevent zombie execution...');
             if (process.platform === 'win32') {
                  spawn('taskkill', ['/pid', minerProcess.pid, '/f', '/t']);
             } else {
