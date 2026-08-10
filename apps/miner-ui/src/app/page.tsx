@@ -14,16 +14,14 @@ import { getStoredSessionRewards, recordAcceptedShare, recordBlockFound } from '
 export default function Dashboard() {
   const router = useRouter();
   const [stats, setStats] = useState({
-    networkHashrate: '185.0 GH/s',
-    localHashrate: '0.00 MH/s',
+    networkHashrate: '...',
+    localHashrate: '0.0 GH/s',
     totalRewards: '0.00 QUAI',
     activeWorkers: '0 / 0'
   });
   const [sessionRewards, setSessionRewards] = useState(0);
   const [acceptedShares, setAcceptedShares] = useState(0);
   const [isMining, setIsMining] = useState(false);
-  const [hashrateEngine, setHashrateEngine] = useState<'CUDA' | null>(null);
-  const [networkDiff, setNetworkDiff] = useState<number>(1000000);
 
   useEffect(() => {
     const storedRewards = getStoredSessionRewards();
@@ -31,71 +29,68 @@ export default function Dashboard() {
     setAcceptedShares(storedRewards.acceptedShares);
   }, []);
 
-  const fetchStats = async () => {
-    try {
-      let walletAddress = '';
-      const storedState = localStorage.getItem('miner_state');
-      if (storedState) {
-        try {
-          const state = JSON.parse(storedState);
-          walletAddress = state.wallet || '';
-          setIsMining(state.active === true);
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const storedState = localStorage.getItem('miner_state');
+        let walletAddress = '';
+        if (storedState) {
+          try {
+            const state = JSON.parse(storedState);
+            walletAddress = state.wallet || '';
 
-          if (state.active === true) {
-            let totalMHs = 0;
-            let workerCount = 0;
+            if (state.active) {
+              setIsMining(true);
+              let totalMHs = 0;
+              let workerCount = 0;
 
-            if (state.mode === 'gpu' || state.mode === 'dual' || !state.mode) {
-              const gpus = Array.isArray(state.gpus) ? state.gpus : [];
-              gpus.forEach((gpu: any) => {
-                const gpuName = typeof gpu === 'string' ? gpu : (gpu?.name || 'NVIDIA GPU');
-                const est = estimateHashrate(gpuName, 'gpu');
+              if (state.mode === 'gpu' || state.mode === 'dual') {
+                (state.gpus || []).forEach((gpu: string) => {
+                  const est = estimateHashrate(gpu, 'gpu');
+                  totalMHs += convertToMHs(est.value, est.unit);
+                  workerCount++;
+                });
+              }
+
+              if (state.mode === 'cpu' || state.mode === 'dual') {
+                const cpuName = state.cpu?.name || 'Generic CPU';
+                const est = estimateHashrate(cpuName, 'cpu');
                 totalMHs += convertToMHs(est.value, est.unit);
                 workerCount++;
-              });
+              }
+
+              setStats(prev => ({
+                ...prev,
+                localHashrate: formatMHsTotal(totalMHs),
+                activeWorkers: `${workerCount} / ${workerCount}`
+              }));
             }
+          } catch (e) {}
+        }
 
-            if (state.mode === 'cpu' || state.mode === 'dual') {
-              const cpuName = typeof state.cpu === 'string' ? state.cpu : (state.cpu?.name || 'Generic CPU');
-              const est = estimateHashrate(cpuName, 'cpu');
-              totalMHs += convertToMHs(est.value, est.unit);
-              workerCount++;
-            }
-
-            setStats(prev => ({
-              ...prev,
-              localHashrate: formatMHsTotal(totalMHs),
-              activeWorkers: `${workerCount} / ${workerCount}`
-            }));
-          }
-        } catch (e) {}
+        const encodedAddress = encodeURIComponent(walletAddress);
+        const response = await fetch(`/api/quai?address=${encodedAddress}`);
+        if (!response.ok) {
+          return;
+        }
+        const data = await response.json();
+        if (data && typeof data === 'object') {
+          setStats(prev => ({
+            ...prev,
+            networkHashrate: data.networkHashrate || prev.networkHashrate || '185.0 GH/s',
+            totalRewards: data.totalPaid || prev.totalRewards || '0.00 QUAI'
+          }));
+        }
+      } catch (error) {
+        console.warn('Failed to fetch miner stats (using defaults):', error);
       }
-
-      const encodedAddress = encodeURIComponent(walletAddress);
-      const response = await fetch(`/api/quai?address=${encodedAddress}`);
-      if (!response.ok) {
-        return;
-      }
-      const data = await response.json();
-      if (data && typeof data === 'object') {
-        if (data.networkDifficulty) setNetworkDiff(data.networkDifficulty);
-        setStats(prev => ({
-          ...prev,
-          networkHashrate: data.networkHashrate || prev.networkHashrate || '185.0 GH/s',
-          totalRewards: data.totalPaid || prev.totalRewards || '0.00 QUAI'
-        }));
-      }
-    } catch (error) {
-      console.warn('Failed to fetch miner stats (using defaults):', error);
-    }
-  };
-
-  useEffect(() => {
+    };
     fetchStats();
 
     // Refresh stats every 30s for real data
-    const interval = setInterval(fetchStats, 30000);
-    return () => clearInterval(interval);
+    const refreshInterval = setInterval(fetchStats, 30000);
+
+    return () => clearInterval(refreshInterval);
   }, []);
 
   const handleBlockFound = () => {
@@ -103,31 +98,29 @@ export default function Dashboard() {
     setSessionRewards(updated.sessionRewards);
   };
 
-  const handleShareAccepted = useCallback((shareInfo?: { nonce?: string; difficulty?: number }) => {
-    const shareDiff = shareInfo?.difficulty || 0.048;
-    const updated = recordAcceptedShare(shareDiff, networkDiff, 1.5);
+  const handleShareAccepted = useCallback(() => {
+    const updated = recordAcceptedShare(0.05);
     setSessionRewards(updated.sessionRewards);
     setAcceptedShares(updated.acceptedShares);
-  }, [networkDiff]);
+  }, []);
 
   const [measuredHashrate, setMeasuredHashrate] = useState<string | null>(null);
   const lastUpdateRef = useRef(0);
 
   // Handle hashrate updates from worker (throttled to 500ms)
-  const handleHashrateUpdate = useCallback((mh: number, engine?: 'CUDA') => {
+  const handleHashrateUpdate = useCallback((mh: number) => {
     const now = Date.now();
     if (now - lastUpdateRef.current > 500) {
       lastUpdateRef.current = now;
-      if (mh > 0) {
+      if (mh > 0 || !measuredHashrate) {
         setMeasuredHashrate(mh > 1000 ? `${(mh / 1000).toFixed(1)} GH/s` : `${mh.toFixed(1)} MH/s`);
-        if (engine) setHashrateEngine(engine);
       }
     }
-  }, []);
+  }, [measuredHashrate]);
 
   // Combined rewards (Confirmed + Session)
   const confirmedRewards = parseFloat(stats.totalRewards.split(' ')[0]) || 0;
-  const totalCombined = (confirmedRewards + sessionRewards).toFixed(4);
+  const totalCombined = (confirmedRewards + sessionRewards).toFixed(2);
 
   return (
     <div className="dashboard-container">
@@ -159,12 +152,7 @@ export default function Dashboard() {
           <StatCard
             title="Local Hashrate"
             value={isMining && measuredHashrate ? measuredHashrate : stats.localHashrate}
-            subValue={
-              isMining && measuredHashrate
-                ? 'MEASURED (CUDA LIVE)'
-                : 'ESTIMATED'
-            }
-            badgeType={isMining && measuredHashrate ? 'cuda' : undefined}
+            subValue={isMining && measuredHashrate ? 'MEASURED (LIVE)' : 'ESTIMATED'}
             icon={Cpu}
             trend={0.5}
             live={isMining}
@@ -178,10 +166,17 @@ export default function Dashboard() {
             trend={sessionRewards > 0 ? (sessionRewards / confirmedRewards * 100) : undefined}
             onClick={() => {
               const stored = localStorage.getItem('miner_state');
+              let targetWallet = '';
               if (stored) {
-                const state = JSON.parse(stored);
-                window.open(`https://explorer.quai.network/address/${state.wallet}`, '_blank');
+                try {
+                  const state = JSON.parse(stored);
+                  if (state && typeof state === 'object' && state.wallet) {
+                    targetWallet = state.wallet;
+                  }
+                } catch (e) {}
               }
+              const url = targetWallet ? `https://quaiscan.io/address/${targetWallet}` : 'https://quaiscan.io';
+              window.open(url, '_blank');
             }}
           />
           <StatCard title="Active Workers" value={stats.activeWorkers} icon={Activity} />

@@ -70,7 +70,22 @@ export default function RewardsPage() {
             <main className="main-content">
                 <header className="page-header">
                     <h1>Rewards & Payouts</h1>
-                    <p>Track your mining earnings for <span className="wallet-span">{wallet || 'No wallet configured'}</span></p>
+                    <p>
+                        Track your mining earnings for{' '}
+                        {wallet ? (
+                            <a
+                                href={`https://quaiscan.io/address/${wallet}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="wallet-span clickable-wallet"
+                                title="View address on Quaiscan Explorer"
+                            >
+                                {wallet} ↗
+                            </a>
+                        ) : (
+                            <span className="wallet-span">No wallet configured</span>
+                        )}
+                    </p>
                 </header>
 
                 <section className="rewards-summary">
