@@ -118,7 +118,7 @@ export default function Dashboard() {
     const now = Date.now();
     if (now - lastUpdateRef.current > 500) {
       lastUpdateRef.current = now;
-      if (mh >= 0) {
+      if (mh > 0) {
         setMeasuredHashrate(mh > 1000 ? `${(mh / 1000).toFixed(1)} GH/s` : `${mh.toFixed(1)} MH/s`);
         if (engine) setHashrateEngine(engine);
       }

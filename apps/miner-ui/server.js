@@ -56,11 +56,14 @@ wss.on('connection', function connection(ws) {
                 if (mode === 'cpu') {
                     args.push('--cpu');
                 } else if (mode === 'gpu') {
-                    args.push('-U'); // Use CUDA hardware acceleration
+                    args.push('-U', '--cuda-grid-size', '8192', '--cuda-parallel-hash', '4');
+                    args.push('--cuda-devices', '0');
                 } else if (mode === 'dual') {
-                    args.push('-U', '--cpu'); // Enable CUDA and CPU mining pipelines
+                    args.push('-U', '--cuda-grid-size', '8192', '--cuda-parallel-hash', '4', '--cpu');
+                    args.push('--cuda-devices', '0');
                 } else {
-                    args.push('-U');
+                    args.push('-U', '--cuda-grid-size', '8192', '--cuda-parallel-hash', '4');
+                    args.push('--cuda-devices', '0');
                 }
 
                 minerProcess = spawn(executable, args);
@@ -92,29 +95,68 @@ wss.on('connection', function connection(ws) {
                             });
                         }
 
-                        // 1. Parse Telemetry lines: e.g. "m 04:59:55 <unknown> 0:01 A1 42.50 Mh - cu0 42.50" or "Speed 42.50 Mh/s"
-                        const hrMatch = cleanLine.match(/(?:Speed\s*:?\s*|A\d+(?::[RWF]\d+)*\s+)([\d.]+)\s*([kMGT]?)h(?:\/s)?/i);
-                        if (hrMatch) {
-                            let val = parseFloat(hrMatch[1]);
-                            const unitPrefix = (hrMatch[2] || '').toUpperCase();
-                            if (unitPrefix === 'G') val *= 1000;
-                            else if (unitPrefix === 'M') val *= 1;
-                            else if (unitPrefix === 'K') val /= 1000;
-                            else if (unitPrefix === '') val /= 1000000; // Convert raw h/s to MH/s
+                        // 1. Dual-Stage Telemetry Parser
+                        // Stage A: Parse Farm Summary Total (e.g. "A1 42.50 Mh" or "Speed 42.50 Mh/s")
+                        const farmHrMatch = cleanLine.match(/(?:Speed\s*:?\s*|A\d+(?::[RWF]\d+)*\s+)([\d.]+)\s*([kMGT]?)h(?:\/s)?/i);
+                        let totalHashrate = null;
+                        let unitPrefix = 'M';
 
+                        if (farmHrMatch) {
+                            let rawVal = parseFloat(farmHrMatch[1]);
+                            unitPrefix = (farmHrMatch[2] || '').toUpperCase();
+                            if (unitPrefix === 'G') totalHashrate = rawVal * 1000;
+                            else if (unitPrefix === 'M') totalHashrate = rawVal * 1;
+                            else if (unitPrefix === 'K') totalHashrate = rawVal / 1000;
+                            else if (unitPrefix === '') totalHashrate = rawVal / 1000000;
+                        }
+
+                        // Stage B: Extract Individual Device Hashrates (cu0 42.50, cu1 42.50, cl0 42.50, cp0 18.50)
+                        const devices = [];
+                        const deviceRegex = /(cu|cl|cp)(\d+)\s+([\d.]+)(?:\s*([kMGT]?)h)?/gi;
+                        let devMatch;
+                        while ((devMatch = deviceRegex.exec(cleanLine)) !== null) {
+                            const devType = devMatch[1].toLowerCase();
+                            const devId = parseInt(devMatch[2], 10);
+                            let devVal = parseFloat(devMatch[3]);
+                            const devUnit = (devMatch[4] || unitPrefix).toUpperCase();
+
+                            let devMHs = devVal;
+                            if (devUnit === 'G') devMHs = devVal * 1000;
+                            else if (devUnit === 'M') devMHs = devVal * 1;
+                            else if (devUnit === 'K') devMHs = devVal / 1000;
+                            else if (devUnit === '') devMHs = devVal / 1000000;
+
+                            devices.push({
+                                id: `${devType}${devId}`,
+                                type: devType === 'cu' ? 'CUDA' : devType === 'cl' ? 'OpenCL' : 'CPU',
+                                hashrate: devMHs
+                            });
+                        }
+
+                        // Stage C: Fallback to Device Sum if Farm Total is 0/null
+                        if (devices.length > 0) {
+                            const deviceSum = devices.reduce((acc, d) => acc + d.hashrate, 0);
+                            if (deviceSum > 0 && (totalHashrate === null || totalHashrate === 0)) {
+                                totalHashrate = deviceSum;
+                            }
+                        }
+
+                        // Broadcast PROGRESS only when positive hashrate (> 0) is verified
+                        if (totalHashrate !== null && totalHashrate > 0) {
                             const hashMatch = cleanLine.match(/0x[0-9a-fA-F]{8,64}/) || cleanLine.match(/Job:\s*([0-9a-fA-F]+)/i);
                             const extractedHash = hashMatch ? (hashMatch[1] || hashMatch[0]) : null;
 
                             broadcast({
                                 type: 'PROGRESS',
-                                hashrate: val,
-                                hashes: Math.floor(val * 1e6),
+                                hashrate: totalHashrate,
+                                hashes: Math.floor(totalHashrate * 1e6),
+                                devices: devices,
                                 lastHash: extractedHash,
                                 engine: 'CUDA'
                             });
                         }
 
-                        // 2. Parse Share Accepted: e.g. "Accepted 350 ms", "**Accepted", or "Sol: ... found"
+                        // 2. Parse Share Accepted
                         const shareMatch = cleanLine.match(/(?:Share accepted|\*\*Accepted|Accepted\s+\d+\s*ms|Sol:.*found)/i);
                         if (shareMatch) {
                             const pingMatch = cleanLine.match(/(\d+)\s*ms/);
@@ -139,8 +181,8 @@ wss.on('connection', function connection(ws) {
                             });
                         }
 
-                        // 4. Send non-telemetry log output to UI console to avoid duplicate speed line spam
-                        if (!hrMatch) {
+                        // 4. Send non-telemetry log output to UI console
+                        if (!farmHrMatch) {
                             broadcast({ type: 'LOG', message: cleanLine, logType: shareMatch ? 'success' : blockMatch ? 'success' : offlineMatch ? 'warning' : 'info' });
                         }
                     }

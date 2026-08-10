@@ -39,7 +39,11 @@ async function startMining(payload: any) {
                 if (data.type === 'ERROR' || data.type === 'POOL_OFFLINE') {
                     self.postMessage({ type: 'LOG', message: data.message || 'Pool or daemon connection error.', logType: 'error' });
                     self.postMessage(data);
-                } else if (['PROGRESS', 'FOUND_BLOCK', 'LOG', 'SHARE_ACCEPTED'].includes(data.type)) {
+                } else if (data.type === 'PROGRESS') {
+                    if (typeof data.hashrate === 'number' && data.hashrate > 0) {
+                        self.postMessage({ ...data, engine: 'CUDA' });
+                    }
+                } else if (['FOUND_BLOCK', 'LOG', 'SHARE_ACCEPTED'].includes(data.type)) {
                     self.postMessage({ ...data, engine: 'CUDA' });
                 }
             } catch (err) {
