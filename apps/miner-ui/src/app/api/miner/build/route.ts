@@ -73,14 +73,26 @@ export async function POST() {
                 // Step 2: Unlink old binaries to guarantee writable target
                 cleanStaleBinaries(cwdPath, controller, encoder);
                 
-                // Set up environment (excluding MinGW C:\Strawberry\c\bin to prevent GCC compiler collision)
-                const strawberryPerlPath = 'C:\\Strawberry\\perl\\bin';
+                // Step 3: Purge corrupted Hunter Boost build caches caused by previous MinGW attempts
+                const hunterBoostBuildDir = 'C:\\.hunter\\_Base\\e70c29f\\2520931\\692f63a\\Build\\Boost';
+                if (fs.existsSync(hunterBoostBuildDir)) {
+                    try {
+                        controller.enqueue(encoder.encode(`> Purging corrupted Hunter Boost build cache in ${hunterBoostBuildDir}...\n`));
+                        fs.rmSync(hunterBoostBuildDir, { recursive: true, force: true });
+                    } catch (e) {}
+                }
+
+                // Sanitize PATH environment variable to completely strip Strawberry/MinGW GCC binaries
+                const cleanPath = (process.env.PATH || '')
+                    .split(';')
+                    .filter(p => !/strawberry|mingw|gcc/i.test(p))
+                    .join(';');
+
                 const cmakePath = 'C:\\Program Files\\CMake\\bin';
-                
                 const env = { 
                     ...process.env, 
-                    HUNTER_ROOT: 'C:\\h',
-                    PATH: `${strawberryPerlPath};${cmakePath};${process.env.PATH}`
+                    HUNTER_ROOT: 'C:\\.hunter',
+                    PATH: `${cmakePath};${cleanPath}`
                 };
 
                 const runBuild = (generator: string, buildDir: string, extraArgs: string[] = [], buildArgs: string[] = []): Promise<number> => {
