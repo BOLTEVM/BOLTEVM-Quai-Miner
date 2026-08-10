@@ -62,13 +62,16 @@ wss.on('connection', function connection(ws) {
                         const trimmed = line.trim();
                         if (!trimmed) continue;
 
+                        // Strip ANSI color codes
+                        const cleanLine = trimmed.replace(/\x1B\[[0-9;]*[a-zA-Z]/g, '');
+
                         // 1. Send raw log output to UI console
                         try {
-                            ws.send(JSON.stringify({ type: 'LOG', message: trimmed, logType: 'info' }));
+                            ws.send(JSON.stringify({ type: 'LOG', message: cleanLine, logType: 'info' }));
                         } catch (e) {}
 
-                        // 2. Parse Hashrate telemetry: e.g. "Speed  42.50 Mh/s" or "Speed: 42.50 MH/s"
-                        const hrMatch = trimmed.match(/Speed\s*:?\s*([\d.]+)\s*([kMGT]?)H\/s/i);
+                        // 2. Parse Telemetry lines: e.g. "m 04:59:55 <unknown> 0:01 A1 42.50 Mh - cu0 42.50" or "Speed 42.50 Mh/s"
+                        const hrMatch = cleanLine.match(/(?:Speed\s*:?\s*|A\d+(?::[RWF]\d+)*\s+)([\d.]+)\s*([kMGT]?)h(?:\/s)?/i);
                         if (hrMatch) {
                             let val = parseFloat(hrMatch[1]);
                             const unitPrefix = hrMatch[2].toUpperCase();
@@ -80,30 +83,30 @@ wss.on('connection', function connection(ws) {
                                     type: 'PROGRESS',
                                     hashrate: val,
                                     hashes: Math.floor(val * 1e6),
-                                    lastHash: trimmed.substring(0, 12)
+                                    lastHash: cleanLine.substring(0, 12)
                                 }));
                             } catch (e) {}
                         }
 
-                        // 3. Parse Share Accepted: e.g. "Accepted 350 ms" or "Share accepted"
-                        const shareMatch = trimmed.match(/(?:Share accepted|\*\*Accepted|Accepted\s+\d+\s*ms)/i);
+                        // 3. Parse Share Accepted: e.g. "Accepted 350 ms", "**Accepted", or "Sol: ... found"
+                        const shareMatch = cleanLine.match(/(?:Share accepted|\*\*Accepted|Accepted\s+\d+\s*ms|Sol:.*found)/i);
                         if (shareMatch) {
                             try {
                                 ws.send(JSON.stringify({
                                     type: 'SHARE_ACCEPTED',
-                                    message: trimmed,
+                                    message: cleanLine,
                                     nonce: Math.floor(Math.random() * 0xffffffff).toString(16)
                                 }));
                             } catch (e) {}
                         }
 
                         // 4. Parse Found Solution
-                        const blockMatch = trimmed.match(/(?:Solution found|Found block|REAL Block Solution)/i);
+                        const blockMatch = cleanLine.match(/(?:Solution found|Found block|REAL Block Solution|Sol:.*found)/i);
                         if (blockMatch) {
                             try {
                                 ws.send(JSON.stringify({
                                     type: 'FOUND_BLOCK',
-                                    proof: trimmed
+                                    proof: cleanLine
                                 }));
                             } catch (e) {}
                         }
