@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import Sidebar from '../components/Sidebar'
 import StatCard from '../components/StatCard'
 import HashrateChart from '../components/HashrateChart'
@@ -10,6 +11,7 @@ import { Cpu, Activity, Database, Globe, Zap } from 'lucide-react'
 import { estimateHashrate, convertToMHs, formatMHsTotal } from '../utils/hashrate'
 
 export default function Dashboard() {
+  const router = useRouter();
   const [stats, setStats] = useState({
     networkHashrate: '...',
     localHashrate: '0.0 GH/s',
@@ -81,13 +83,16 @@ export default function Dashboard() {
   };
 
   const [measuredHashrate, setMeasuredHashrate] = useState<string | null>(null);
+  const lastUpdateRef = useRef(0);
 
-  // Handle hashrate updates from worker
-  const handleHashrateUpdate = (mh: number) => {
-    // Correct mapping: Browser-worker usually does ~10-100 processed megahashes
-    // We scale this to GH/s for the UI if it's very fast, else MH/s
-    setMeasuredHashrate(mh > 1000 ? `${(mh / 1000).toFixed(1)} GH/s` : `${mh.toFixed(1)} MH/s`);
-  };
+  // Handle hashrate updates from worker (throttled to 500ms)
+  const handleHashrateUpdate = useCallback((mh: number) => {
+    const now = Date.now();
+    if (now - lastUpdateRef.current > 500) {
+      lastUpdateRef.current = now;
+      setMeasuredHashrate(mh > 1000 ? `${(mh / 1000).toFixed(1)} GH/s` : `${mh.toFixed(1)} MH/s`);
+    }
+  }, []);
 
   // Combined rewards (Confirmed + Session)
   const confirmedRewards = parseFloat(stats.totalRewards.split(' ')[0]) || 0;
@@ -103,7 +108,7 @@ export default function Dashboard() {
             <p>Advanced cross-chain mining synchronization dashboard.</p>
           </div>
           <div className="hero-actions">
-            <button className="btn-primary" onClick={() => window.location.href = '/setup'}>1-Click Setup</button>
+            <button className="btn-primary" onClick={() => router.push('/setup')}>1-Click Setup</button>
           </div>
         </header>
 
@@ -115,7 +120,7 @@ export default function Dashboard() {
               <p>Experience up to 15% better efficiency with our 1-click GPU calibration.</p>
             </div>
           </div>
-          <button className="btn-primary small" onClick={() => window.location.href = '/setup'}>Start Setup Wizard</button>
+          <button className="btn-primary small" onClick={() => router.push('/setup')}>Start Setup Wizard</button>
         </section>
 
         <section className="stats-grid">

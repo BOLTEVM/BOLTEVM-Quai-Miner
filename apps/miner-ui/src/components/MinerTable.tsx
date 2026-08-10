@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { estimateHashrate, formatHashrate } from '../utils/hashrate';
 
 export default function MinerTable() {
@@ -74,7 +75,7 @@ export default function MinerTable() {
           )) : (
             <tr>
               <td colSpan={6} style={{ textAlign: 'center', padding: '48px', color: 'var(--text-secondary)' }}>
-                No active workers. Complete the <a href="/setup" style={{ color: 'var(--accent-cyan)' }}>1-Click Setup</a> to start mining.
+                No active workers. Complete the <Link href="/setup" style={{ color: 'var(--accent-cyan)' }}>1-Click Setup</Link> to start mining.
               </td>
             </tr>
           )}

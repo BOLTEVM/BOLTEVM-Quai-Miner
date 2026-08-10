@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Cpu, CheckCircle, Rocket, ShieldCheck, Zap, Database, Terminal, Loader2, Globe } from 'lucide-react';
 
 const steps = [
@@ -27,6 +28,7 @@ const pools = [
 ];
 
 export default function SetupWizard() {
+    const router = useRouter();
     const [currentStep, setCurrentStep] = useState(1);
     const [detecting, setDetecting] = useState(false);
     const [gpus, setGpus] = useState<string[]>([]);
@@ -360,7 +362,7 @@ export default function SetupWizard() {
                     </div>
                 )}
 
-                {currentStep === 3 && (
+                {currentStep === 4 && (
                     <div className="step-pane animate-in">
                         <h2>Build Optimized Binary</h2>
                         <p>Compiling official quai-gpu-miner from source for your specific hardware.</p>

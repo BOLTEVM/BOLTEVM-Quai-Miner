@@ -1,5 +1,6 @@
 import { spawn } from 'child_process';
 import path from 'path';
+import fs from 'fs';
 
 // Simple in-memory lock to prevent concurrent build processes
 let isBuilding = false;
@@ -31,10 +32,23 @@ export async function POST() {
 
             const runBuild = (generator: string, buildDir: string, extraArgs: string[] = [], buildArgs: string[] = []): Promise<number> => {
                 return new Promise((resolve) => {
+                    const fullBuildPath = path.join(cwdPath, buildDir);
+                    if (fs.existsSync(fullBuildPath)) {
+                        try {
+                            controller.enqueue(encoder.encode(`> Cleaning stale CMake build cache in ./${buildDir}...\n`));
+                            fs.rmSync(fullBuildPath, { recursive: true, force: true });
+                        } catch (e) {
+                            const cacheFile = path.join(fullBuildPath, 'CMakeCache.txt');
+                            if (fs.existsSync(cacheFile)) {
+                                fs.rmSync(cacheFile, { force: true });
+                            }
+                        }
+                    }
+
                     controller.enqueue(encoder.encode(`> Attempting build with ${generator} in ./${buildDir}...\n`));
                     
                     const configCmd = spawn(path.join(cmakePath, 'cmake.exe'), 
-                        ['.', '-B', buildDir, '-G', generator, ...extraArgs, '-DHUNTER_STATUS_DEBUG=ON', '-DCMAKE_POLICY_VERSION_MINIMUM=3.5'], 
+                        ['.', '-B', buildDir, '--fresh', '-G', generator, ...extraArgs, '-DHUNTER_STATUS_DEBUG=ON', '-DCMAKE_POLICY_VERSION_MINIMUM=3.5'], 
                         { cwd: cwdPath, env }
                     );
 
