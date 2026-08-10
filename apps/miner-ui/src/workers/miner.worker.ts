@@ -41,8 +41,13 @@ async function startMining(payload: any) {
         ws.onmessage = (event) => {
             try {
                 const data = JSON.parse(event.data);
-                // Forward all telemetry message types directly to MiningConsole UI
-                if (['PROGRESS', 'FOUND_BLOCK', 'LOG', 'SHARE_ACCEPTED', 'ERROR'].includes(data.type)) {
+                if (data.type === 'ERROR') {
+                    self.postMessage(data);
+                    if (data.message && data.message.includes('Failed to launch miner process') && !fallbackInterval) {
+                        initFallbackWebMiner(payload);
+                    }
+                }
+                if (['PROGRESS', 'FOUND_BLOCK', 'LOG', 'SHARE_ACCEPTED'].includes(data.type)) {
                     self.postMessage(data);
                 }
             } catch (err) {

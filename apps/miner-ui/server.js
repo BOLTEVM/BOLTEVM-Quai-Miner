@@ -56,11 +56,11 @@ wss.on('connection', function connection(ws) {
                 if (mode === 'cpu') {
                     args.push('--cpu');
                 } else if (mode === 'gpu') {
-                    args.push('-U', '-G'); // Pass both CUDA and OpenCL flags for maximum GPU hardware support
+                    args.push('-U'); // Use CUDA hardware acceleration
                 } else if (mode === 'dual') {
-                    args.push('-U', '-G', '--cpu'); // Enable CUDA, OpenCL, and CPU mining pipelines
+                    args.push('-U', '--cpu'); // Enable CUDA and CPU mining pipelines
                 } else {
-                    args.push('-U', '-G');
+                    args.push('-U');
                 }
 
                 minerProcess = spawn(executable, args);
@@ -83,9 +83,11 @@ wss.on('connection', function connection(ws) {
                         const hrMatch = cleanLine.match(/(?:Speed\s*:?\s*|A\d+(?::[RWF]\d+)*\s+)([\d.]+)\s*([kMGT]?)h(?:\/s)?/i);
                         if (hrMatch) {
                             let val = parseFloat(hrMatch[1]);
-                            const unitPrefix = hrMatch[2].toUpperCase();
+                            const unitPrefix = (hrMatch[2] || '').toUpperCase();
                             if (unitPrefix === 'G') val *= 1000;
-                            if (unitPrefix === 'K') val /= 1000;
+                            else if (unitPrefix === 'M') val *= 1;
+                            else if (unitPrefix === 'K') val /= 1000;
+                            else if (unitPrefix === '') val /= 1000000; // Convert raw h/s to MH/s
 
                             const hashMatch = cleanLine.match(/0x[0-9a-fA-F]{8,64}/) || cleanLine.match(/Job:\s*([0-9a-fA-F]+)/i);
                             const extractedHash = hashMatch ? (hashMatch[1] || hashMatch[0]) : null;
