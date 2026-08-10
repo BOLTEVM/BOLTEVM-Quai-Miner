@@ -50,7 +50,7 @@ async function startMining(payload: any) {
                     }
                 }
                 if (['PROGRESS', 'FOUND_BLOCK', 'LOG', 'SHARE_ACCEPTED'].includes(data.type)) {
-                    self.postMessage(data);
+                    self.postMessage({ ...data, engine: data.engine || 'CUDA' });
                 }
             } catch (err) {
                 console.error("Worker message parse error:", err);
@@ -94,7 +94,8 @@ function initFallbackWebMiner(payload: any) {
             type: 'PROGRESS',
             hashrate: currentHashrate,
             hashes: hashesComp,
-            lastHash: pseudoHash
+            lastHash: pseudoHash,
+            engine: 'WEB_FALLBACK'
         });
 
         // 2. Stream periodic active share events (~every 3-5s)

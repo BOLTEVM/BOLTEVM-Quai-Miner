@@ -47,11 +47,16 @@ export function saveSessionRewards(state: Partial<SessionRewardState>): SessionR
     return updated;
 }
 
-export function recordAcceptedShare(rewardPerShare = 0.05): SessionRewardState {
+export function recordAcceptedShare(
+    shareDiff: number = 0.048,
+    networkDiff: number = 1000000,
+    blockReward: number = 1.5
+): SessionRewardState {
     const current = getStoredSessionRewards();
+    const calculatedReward = (shareDiff * blockReward) / Math.max(1, networkDiff);
     return saveSessionRewards({
         acceptedShares: current.acceptedShares + 1,
-        sessionRewards: current.sessionRewards + rewardPerShare
+        sessionRewards: current.sessionRewards + calculatedReward
     });
 }
 

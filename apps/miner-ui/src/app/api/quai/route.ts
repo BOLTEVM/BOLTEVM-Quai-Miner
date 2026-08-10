@@ -12,6 +12,7 @@ export async function GET(request: Request) {
 
     const defaultResponse = {
         networkHashrate: '185.0 GH/s',
+        networkDifficulty: 1000000,
         totalPaid: '0.0000 QUAI',
         unpaidBalance: '0.0000 QUAI',
         payoutThreshold: '10.00 QUAI',
@@ -27,7 +28,7 @@ export async function GET(request: Request) {
 
     for (const rpcUrl of RPC_ENDPOINTS) {
         try {
-            const [balanceRes, blockRes] = await Promise.all([
+            const [balanceRes, blockRes, headerRes] = await Promise.all([
                 fetch(rpcUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -49,6 +50,17 @@ export async function GET(request: Request) {
                         id: 2
                     }),
                     signal: AbortSignal.timeout(3000)
+                }).catch(() => null),
+                fetch(rpcUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        jsonrpc: '2.0',
+                        method: 'quai_getHeaderByNumber',
+                        params: ['latest'],
+                        id: 3
+                    }),
+                    signal: AbortSignal.timeout(3000)
                 }).catch(() => null)
             ]);
 
@@ -58,7 +70,9 @@ export async function GET(request: Request) {
             if (balanceData.error || balanceData.result === undefined) continue;
 
             const balanceWei = BigInt(balanceData.result || '0');
-            const balanceQuai = (Number(balanceWei) / 1e18).toFixed(4);
+            const integerPart = balanceWei / 10n**18n;
+            const fractionalPart = ((balanceWei % 10n**18n) / 10n**14n).toString().padStart(4, '0');
+            const balanceQuai = `${integerPart}.${fractionalPart}`;
 
             let blockHeight = 1042500;
             if (blockRes && blockRes.ok) {
@@ -70,8 +84,19 @@ export async function GET(request: Request) {
                 } catch (e) {}
             }
 
+            let networkDifficulty = 1000000;
+            if (headerRes && headerRes.ok) {
+                try {
+                    const headerData = await headerRes.json();
+                    if (headerData.result?.difficulty) {
+                        networkDifficulty = parseInt(headerData.result.difficulty, 16);
+                    }
+                } catch (e) {}
+            }
+
             return NextResponse.json({
                 networkHashrate: '185.0 GH/s',
+                networkDifficulty,
                 totalPaid: `${balanceQuai} QUAI`,
                 unpaidBalance: '0.0000 QUAI',
                 payoutThreshold: '10.00 QUAI',

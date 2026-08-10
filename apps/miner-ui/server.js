@@ -112,7 +112,8 @@ wss.on('connection', function connection(ws) {
                                 type: 'PROGRESS',
                                 hashrate: val,
                                 hashes: Math.floor(val * 1e6),
-                                lastHash: extractedHash
+                                lastHash: extractedHash,
+                                engine: 'CUDA'
                             });
                         }
 

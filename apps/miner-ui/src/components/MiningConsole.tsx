@@ -13,7 +13,7 @@ interface Log {
 
 interface MiningConsoleProps {
   onBlockFound?: () => void;
-  onHashrateUpdate?: (mh: number) => void;
+  onHashrateUpdate?: (mh: number, engine?: 'CUDA' | 'WEB_FALLBACK') => void;
   onShareAccepted?: (shareInfo?: { nonce?: string; difficulty?: number }) => void;
 }
 
@@ -39,44 +39,35 @@ export default function MiningConsole({ onBlockFound, onHashrateUpdate, onShareA
 
   useEffect(() => {
     const storedState = localStorage.getItem('miner_state');
-    let parsedState: any = {};
-    let totalMHs = 0;
-    let poolUrl = 'stratum+tcp://quai.pool.bolt-evm.com:3333';
-    let intensity = 'Medium (Standard)';
-    let isMiningActive = false;
-
-    if (storedState) {
-      try {
-        parsedState = JSON.parse(storedState);
-      } catch (e) {}
-      if (parsedState.stratum) poolUrl = parsedState.stratum;
-      if (parsedState.intensity) intensity = parsedState.intensity;
-      isMiningActive = parsedState.active;
-
-      setActivePool(poolUrl.replace('stratum+tcp://', ''));
-
-      if (isMiningActive) {
-        if (parsedState.mode === 'gpu' || parsedState.mode === 'dual') {
-          (parsedState.gpus || []).forEach((gpu: string) => {
-            const est = estimateHashrate(gpu, 'gpu');
-            totalMHs += convertToMHs(est.value, est.unit);
-          });
-        }
-        if (parsedState.mode === 'cpu' || parsedState.mode === 'dual') {
-          const est = estimateHashrate(parsedState.cpu?.name || '', 'cpu');
-          totalMHs += convertToMHs(est.value, est.unit);
-        }
-      }
+    if (!storedState) {
+      addLog('No miner configuration found. Please run 1-Click Setup Wizard.', 'warning');
+      return;
     }
 
-    // Initial logs
-    addLog('BoltEVM Miner v1.0.4 initialized...', 'info');
-    addLog(`Connecting to Mining Pool: ${poolUrl}`, 'info');
-    addLog('Auth check complete. Worker: bolt-worker-16', 'success');
+    let parsedState: any = {};
+    try {
+      parsedState = JSON.parse(storedState);
+    } catch (e) {
+      addLog('Failed to read miner configuration.', 'error');
+      return;
+    }
+
+    const isMiningActive = parsedState.active === true;
+    const poolUrl = parsedState.stratum || 'stratum+tcp://quai-kawpow.kryptex.network:7043';
+    const intensity = parsedState.intensity || 'Medium (Standard)';
+
+    if (parsedState.stratum) {
+      const cleanUrl = parsedState.stratum.replace(/^(?:stratum\+(?:tcp|ssl|tls):\/\/)?/, '');
+      setActivePool(cleanUrl);
+    }
+
+    addLog('BoltEVM Stratum Client Engine Initialized.', 'info');
+    addLog(`Target Stratum Pool: ${poolUrl}`, 'info');
+    addLog(`Mining Intensity Profile: ${intensity}`, 'info');
 
     if (isMiningActive) {
-      addLog(`Hardware Pipeline Initialized. Profile: ${parsedState.profile || 'balanced'} | Mode: ${parsedState.mode || 'gpu'}`, 'success');
-
+      addLog('Starting Hashing Worker Thread...', 'info');
+      
       // Start Real/Telemetry Hashing Worker
       const minerWorker = new Worker(new URL('../workers/miner.worker.ts', import.meta.url));
       
@@ -100,13 +91,14 @@ export default function MiningConsole({ onBlockFound, onHashrateUpdate, onShareA
         } else if (type === 'SHARE_ACCEPTED') {
           addLog(message || `Share Accepted! Nonce: ${nonce || '0x...'}`, 'success');
           if (onShareAccepted) {
-            onShareAccepted({ nonce });
+            onShareAccepted({ nonce, difficulty: e.data.difficulty || 0.048 });
           }
         } else if (type === 'PROGRESS') {
           const formattedHr = hashrate >= 1000 ? `${(hashrate / 1000).toFixed(2)} GH/s` : `${hashrate.toFixed(2)} MH/s`;
           const hashDisplay = lastHash ? (lastHash.startsWith('0x') ? lastHash : `0x${lastHash}`) : 'Active';
-          addLog(`[Telemetry] Speed: ${formattedHr} | Status: ${hashDisplay}`, 'info');
-          if (onHashrateUpdate) onHashrateUpdate(hashrate);
+          const engineLabel = e.data.engine === 'CUDA' ? '[CUDA Live]' : '[Web Fallback]';
+          addLog(`[Telemetry ${engineLabel}] Speed: ${formattedHr} | Status: ${hashDisplay}`, 'info');
+          if (onHashrateUpdate) onHashrateUpdate(hashrate, e.data.engine || 'WEB_FALLBACK');
         } else if (type === 'FOUND_BLOCK') {
           addLog(`REAL Block Solution Accepted! Proof: ${proof ? proof.substring(0, 24) : ''}...`, 'success');
           if (onBlockFound) onBlockFound();
