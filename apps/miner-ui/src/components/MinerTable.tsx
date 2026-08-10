@@ -164,11 +164,19 @@ export default function MinerTable({ refreshTrigger, onToast }: MinerTableProps)
   };
 
   const handleTogglePause = (workerId: string) => {
+    let toastMsg = '';
+    let toastType: Toast['type'] = 'info';
+
     setWorkers(prev => {
+      const target = prev.find(w => w.id === workerId);
+      if (target) {
+        const newStatus: WorkerItem['status'] = target.status === 'Paused' ? 'Online' : 'Paused';
+        toastMsg = `Worker ${workerId} is now ${newStatus.toLowerCase()}.`;
+        toastType = newStatus === 'Online' ? 'success' : 'info';
+      }
       const updated = prev.map(w => {
         if (w.id === workerId) {
           const newStatus: WorkerItem['status'] = w.status === 'Paused' ? 'Online' : 'Paused';
-          onToast?.(`Worker ${workerId} is now ${newStatus.toLowerCase()}.`, newStatus === 'Online' ? 'success' : 'info');
           return { ...w, status: newStatus };
         }
         return w;
@@ -177,13 +185,16 @@ export default function MinerTable({ refreshTrigger, onToast }: MinerTableProps)
       if (stored) saveCustomWorkers(JSON.parse(stored), updated);
       return updated;
     });
+
+    if (toastMsg) {
+      onToast?.(toastMsg, toastType);
+    }
   };
 
   const handleStop = (workerId: string) => {
     setWorkers(prev => {
       const updated = prev.map(w => {
         if (w.id === workerId) {
-          onToast?.(`Worker ${workerId} stopped.`, 'warning');
           return { ...w, status: 'Offline' as const, hashrate: '0.00 MH/s' };
         }
         return w;
@@ -192,16 +203,17 @@ export default function MinerTable({ refreshTrigger, onToast }: MinerTableProps)
       if (stored) saveCustomWorkers(JSON.parse(stored), updated);
       return updated;
     });
+    onToast?.(`Worker ${workerId} stopped.`, 'warning');
   };
 
   const handleRemove = (workerId: string) => {
     setWorkers(prev => {
       const updated = prev.filter(w => w.id !== workerId);
-      onToast?.(`Worker ${workerId} removed.`, 'error');
       const stored = localStorage.getItem('miner_state');
       if (stored) saveCustomWorkers(JSON.parse(stored), updated);
       return updated;
     });
+    onToast?.(`Worker ${workerId} removed.`, 'error');
   };
 
   return (
