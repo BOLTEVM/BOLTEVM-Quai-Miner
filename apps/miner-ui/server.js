@@ -87,9 +87,11 @@ function getMinerExecutablePath() {
     ];
     for (const cand of candidates) {
         if (cand === 'quai-gpu-miner' || fs.existsSync(cand)) {
+            console.log(`[MINER-EXEC] Resolved active native miner binary: ${path.resolve(cand)}`);
             return cand;
         }
     }
+    console.warn(`[MINER-EXEC] No build binary found on disk. Falling back to system PATH binary 'quai-gpu-miner'`);
     return 'quai-gpu-miner';
 }
 
