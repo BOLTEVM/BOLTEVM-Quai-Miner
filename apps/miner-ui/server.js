@@ -7,6 +7,7 @@ const wss = new WebSocketServer({ port: 8081 });
 console.log('Local Middleware WebSocket Server running on port 8081');
 
 let minerProcess = null;
+let disconnectTimeout = null;
 
 // Dynamic Multi-Tier Quai Network Chain Heights
 let chainHeights = {
@@ -98,12 +99,23 @@ function getMinerExecutablePath() {
 wss.on('connection', function connection(ws) {
     console.log(`Frontend connected to middleware. Total active clients: ${wss.clients.size}`);
 
+    if (disconnectTimeout) {
+        console.log('[GRACE-PERIOD] Client reconnected within grace period. Canceling miner shutdown timer.');
+        clearTimeout(disconnectTimeout);
+        disconnectTimeout = null;
+    }
+
     ws.on('message', function message(data) {
         try {
             const parsed = JSON.parse(data);
             
             if (parsed.type === 'START') {
                 const { wallet, mode, stratum, workerId } = parsed.payload || {};
+                
+                if (disconnectTimeout) {
+                    clearTimeout(disconnectTimeout);
+                    disconnectTimeout = null;
+                }
                 
                 if (minerProcess) {
                     try {
@@ -128,11 +140,11 @@ wss.on('connection', function connection(ws) {
                 if (mode === 'cpu') {
                     args.push('--cpu');
                 } else if (mode === 'gpu') {
-                    args.push('-U'); // Use CUDA hardware acceleration
+                    args.push('-U', '--cuda-grid-size', '2048', '--cuda-block-size', '128', '--cuda-streams', '2');
                 } else if (mode === 'dual') {
-                    args.push('-U', '--cpu'); // Enable CUDA and CPU mining pipelines
+                    args.push('-U', '--cuda-grid-size', '2048', '--cuda-block-size', '128', '--cuda-streams', '2', '--cpu');
                 } else {
-                    args.push('-U');
+                    args.push('-U', '--cuda-grid-size', '2048', '--cuda-block-size', '128', '--cuda-streams', '2');
                 }
 
                 minerProcess = spawn(executable, args);
@@ -206,8 +218,8 @@ wss.on('connection', function connection(ws) {
                             });
                         }
 
-                        // 4. Parse Share Accepted: e.g. "Accepted 350 ms", "**Accepted", or "Sol: ... found"
-                        const shareMatch = cleanLine.match(/(?:Share accepted|\*\*Accepted|Accepted\s+\d+\s*ms|Sol:.*found)/i);
+                        // 4. Parse Share Accepted: e.g. "Accepted 350 ms" or "**Accepted"
+                        const shareMatch = cleanLine.match(/(?:Share accepted|\*\*Accepted|Accepted\s+\d+\s*ms)/i);
                         if (shareMatch) {
                             const isStale = !isValidPoolBlock(activePoolJobBlock);
                             broadcast({
@@ -247,6 +259,10 @@ wss.on('connection', function connection(ws) {
 
                 minerProcess.on('close', (code) => {
                     console.log(`Miner process exited with code ${code}`);
+                    if (disconnectTimeout) {
+                        clearTimeout(disconnectTimeout);
+                        disconnectTimeout = null;
+                    }
                     if (code !== 0 && code !== null) {
                         broadcast({
                             type: 'ERROR',
@@ -259,6 +275,10 @@ wss.on('connection', function connection(ws) {
                 });
 
             } else if (parsed.type === 'STOP') {
+                if (disconnectTimeout) {
+                    clearTimeout(disconnectTimeout);
+                    disconnectTimeout = null;
+                }
                 if (minerProcess) {
                     console.log('Stopping miner process via UI request.');
                     if (process.platform === 'win32') {
@@ -270,6 +290,10 @@ wss.on('connection', function connection(ws) {
                 }
             } else if (parsed.type === 'REBOOT') {
                 console.log(`Rebooting worker ${parsed.targetWorker || 'process'} via UI request...`);
+                if (disconnectTimeout) {
+                    clearTimeout(disconnectTimeout);
+                    disconnectTimeout = null;
+                }
                 if (minerProcess) {
                     try {
                         if (process.platform === 'win32') {
@@ -296,15 +320,28 @@ wss.on('connection', function connection(ws) {
         const remainingClients = wss.clients.size;
         console.log(`Frontend client disconnected. Remaining active clients: ${remainingClients}`);
         
-        // Session-Aware Process Management: Only terminate miner process if zero clients remain
+        // 15-Second Disconnect Grace Period: Allow tab reload / navigation without killing native GPU miner
         if (remainingClients === 0 && minerProcess) {
-            console.log('No active WebSocket clients remaining. Shutting down miner process to prevent zombie execution...');
-            if (process.platform === 'win32') {
-                 spawn('taskkill', ['/pid', minerProcess.pid, '/f', '/t']);
-            } else {
-                 minerProcess.kill('SIGTERM');
+            console.log('[GRACE-PERIOD] Zero active clients remaining. Starting 15-second grace period before shutting down miner process...');
+            if (disconnectTimeout) {
+                clearTimeout(disconnectTimeout);
             }
-            minerProcess = null;
+            disconnectTimeout = setTimeout(() => {
+                if (wss.clients.size === 0 && minerProcess) {
+                    console.log('[GRACE-PERIOD EXPIRED] No clients reconnected within 15s. Terminating native miner process...');
+                    try {
+                        if (process.platform === 'win32') {
+                             spawn('taskkill', ['/pid', minerProcess.pid, '/f', '/t']);
+                        } else {
+                             minerProcess.kill('SIGTERM');
+                        }
+                    } catch (e) {
+                        console.error('Error stopping miner process on grace period expiry:', e);
+                    }
+                    minerProcess = null;
+                }
+                disconnectTimeout = null;
+            }, 15000);
         }
     });
 });

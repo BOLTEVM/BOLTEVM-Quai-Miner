@@ -20,6 +20,7 @@
 ## ✨ Features
 
 - **⚡ 1-Click Setup Wizard** — Intelligent 6-step automated configuration. Handles hardware detection, toolchain validation, source compilation, and wallet setup.
+- **⛏️ KawPow Mining Engine** — Powered by the official Quai **KawPow** PoW algorithm for high-efficiency GPU mining.
 - **🔄 Hybrid Mining Mode** — Switch between **GPU Solo**, **CPU Solo**, or **Dual Mining** (GPU + CPU) from the same interface.
 - **🐧 Cross-Platform (Windows & Linux)** — Full native support for both Windows (MSVC) and Linux (GCC/Make) build environments.
 - **🖥️ Full Hardware Detection** — Detects NVIDIA/AMD GPUs and CPU cores using platform-native commands on both Windows and Linux.

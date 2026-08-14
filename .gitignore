@@ -32,3 +32,9 @@ next-env.d.ts
 
 # git
 .git/
+
+# scratch & temporary logs
+scratch/
+*.log
+implementation_plan.md
+
