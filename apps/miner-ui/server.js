@@ -155,8 +155,10 @@ wss.on('connection', function connection(ws) {
                     .replace(/[^a-zA-Z0-9_-]/g, '');
 
                 // Kryptex uses wallet/worker format; all others use wallet.worker
-                const poolId = (parsed.payload?.pool || parsed.pool || 'kryptex');
-                const walletFmt = poolId === 'kryptex'
+                // Infer from URL as fallback — Settings page can change stratum without updating pool
+                const poolId = (parsed.payload?.pool || parsed.pool || '');
+                const isKryptex = poolId === 'kryptex' || targetPool.toLowerCase().includes('kryptex');
+                const walletFmt = isKryptex
                     ? `${cleanWallet}/${cleanWorkerId}`
                     : `${cleanWallet}.${cleanWorkerId}`;
 
@@ -168,15 +170,10 @@ wss.on('connection', function connection(ws) {
                 console.log(`Starting miner executable (${executable}) -> ${stratumEndpoint} (mode: ${mode}, pool: ${poolId})`);
 
                 const args = ['-P', stratumEndpoint];
-                if (isSolo) {
-                    // Solo mining against local go-quai node via getwork
-                    args.push('-G');
-                } else if (mode === 'cpu') {
-                    args.push('--cpu');
-                } else if (mode === 'gpu') {
+                // kawpowminer: -U = CUDA, -G = OpenCL. Binary compiled with ETHASHCPU=OFF.
+                // Always use CUDA for NVIDIA. --cpu is not a recognized flag.
+                if (mode === 'gpu' || mode === 'dual' || mode === 'cpu') {
                     args.push('-U', '--cuda-grid-size', '2048', '--cuda-block-size', '128', '--cuda-streams', '2');
-                } else if (mode === 'dual') {
-                    args.push('-U', '--cuda-grid-size', '2048', '--cuda-block-size', '128', '--cuda-streams', '2', '--cpu');
                 } else {
                     args.push('-U', '--cuda-grid-size', '2048', '--cuda-block-size', '128', '--cuda-streams', '2');
                 }

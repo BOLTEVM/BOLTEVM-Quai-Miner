@@ -22,3 +22,16 @@ export function validateQuaiWallet(address: string): { valid: boolean; error?: s
     if (!isCyprus1Zone(clean)) return { valid: false, error: 'Address must belong to Cyprus-1 zone (starts with 0x00... through 0x0D...).' };
     return { valid: true };
 }
+
+/**
+ * K1Pool Account ID Validator
+ * K1Pool uses internal account IDs (e.g., Kr_XXXXXXXX), not raw blockchain addresses.
+ */
+export function validateK1PoolAccount(account: string): { valid: boolean; error?: string } {
+    const clean = (account || '').trim();
+    if (!clean) return { valid: false, error: 'K1Pool account ID is required.' };
+    if (!/^Kr_[A-Za-z0-9]{4,32}$/.test(clean)) {
+        return { valid: false, error: 'K1Pool account ID must match format: Kr_XXXXXXXX (create one at k1pool.com).' };
+    }
+    return { valid: true };
+}

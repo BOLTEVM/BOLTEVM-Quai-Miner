@@ -31,6 +31,17 @@ export default function SettingsPage() {
         }
     }, []);
 
+    const inferPoolId = (stratum: string): string => {
+        const url = stratum.toLowerCase();
+        if (url.includes('kryptex')) return 'kryptex';
+        if (url.includes('herominers')) return 'herominers';
+        if (url.includes('k1pool')) return 'k1pool';
+        if (url.includes('127.0.0.1') || url.includes('localhost')) {
+            return url.startsWith('http') ? 'solo' : 'bolt';
+        }
+        return 'kryptex'; // Default
+    };
+
     const handleSave = () => {
         const stored = localStorage.getItem('miner_state');
         let state = stored ? JSON.parse(stored) : {};
@@ -42,7 +53,8 @@ export default function SettingsPage() {
             autoDiff: config.autoDiff,
             stratum: config.stratum,
             fallback: config.fallback,
-            walletLocked: config.walletLocked
+            walletLocked: config.walletLocked,
+            pool: inferPoolId(config.stratum)
         };
 
         localStorage.setItem('miner_state', JSON.stringify(newState));

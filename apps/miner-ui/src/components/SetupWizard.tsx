@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Cpu, CheckCircle, Rocket, ShieldCheck, Zap, Database, Terminal, Loader2, Globe } from 'lucide-react';
-import { validateQuaiWallet, normalizeQuaiAddress } from '../utils/walletValidation';
+import { validateQuaiWallet, validateK1PoolAccount, normalizeQuaiAddress } from '../utils/walletValidation';
 
 const steps = [
     { id: 1, title: 'Hardware Detection', icon: Cpu },
@@ -352,9 +352,14 @@ export default function SetupWizard() {
                                     </div>
                                 )}
                                 {!nodeSetupSuccess ? (
-                                    <button className="btn-primary" onClick={runNodeSetup} disabled={isSettingUpNode}>
-                                        {isSettingUpNode ? 'Initializing Node Build...' : 'Auto-Install Quai Node (Ubuntu)'}
-                                    </button>
+                                    <div>
+                                        <button className="btn-primary" onClick={runNodeSetup} disabled={true}>
+                                            Auto-Install (Linux only — see docs for Windows)
+                                        </button>
+                                        <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 8 }}>
+                                            Windows users: install go-quai manually and ensure the node is running on port 8610.
+                                        </p>
+                                    </div>
                                 ) : (
                                     <div className="status-success">✓ Local Node Ready</div>
                                 )}
@@ -508,24 +513,35 @@ export default function SetupWizard() {
                 {currentStep === 6 && (
                     <div className="step-pane animate-in">
                         <h2>Reward Allocation</h2>
-                        <p>Enter your Quai Network address to receive mining rewards.</p>
+                        <p>{selectedPool === 'k1pool'
+                            ? 'Enter your K1Pool Account ID to receive mining rewards.'
+                            : 'Enter your Quai Network address to receive mining rewards.'
+                        }</p>
 
                         <div className="wallet-input-container">
-                            <label>Payout Address (Cyprus-1 Zone)</label>
+                            <label>{selectedPool === 'k1pool' ? 'K1Pool Account ID' : 'Payout Address (Cyprus-1 Zone)'}</label>
                             <input
                                 type="text"
-                                placeholder="0x..."
+                                placeholder={selectedPool === 'k1pool' ? 'Kr_XXXXXXXX' : '0x...'}
                                 value={wallet}
                                 onChange={(e) => setWallet(e.target.value)}
                                 className="glass-input"
                             />
                             {(() => {
-                                const valResult = validateQuaiWallet(wallet);
+                                const valResult = selectedPool === 'k1pool'
+                                    ? validateK1PoolAccount(wallet)
+                                    : validateQuaiWallet(wallet);
                                 return valResult.valid ? (
-                                    <p className="input-hint" style={{ color: '#00ff7f' }}>✓ Valid Cyprus-1 Zone Quai Address</p>
+                                    <p className="input-hint" style={{ color: '#00ff7f' }}>
+                                        {selectedPool === 'k1pool'
+                                            ? '✓ Valid K1Pool Account ID'
+                                            : '✓ Valid Cyprus-1 Zone Quai Address'}
+                                    </p>
                                 ) : (
                                     <p className="input-hint" style={{ color: wallet.length > 0 ? '#ff453a' : 'var(--text-secondary)' }}>
-                                        {valResult.error || 'Ensure this is a Cyprus-1 address (starts with 0x00... through 0x0D...)'}
+                                        {valResult.error || (selectedPool === 'k1pool'
+                                            ? 'Enter your K1Pool Account ID (format: Kr_XXXXXXXX)'
+                                            : 'Ensure this is a Cyprus-1 address (starts with 0x00... through 0x0D...)')}
                                     </p>
                                 );
                             })()}
@@ -536,7 +552,10 @@ export default function SetupWizard() {
                             <button
                                 className="btn-primary"
                                 onClick={nextStep}
-                                disabled={!validateQuaiWallet(wallet).valid}
+                                disabled={selectedPool === 'k1pool'
+                                    ? !validateK1PoolAccount(wallet).valid
+                                    : !validateQuaiWallet(wallet).valid
+                                }
                             >
                                 Finalize Configuration
                             </button>

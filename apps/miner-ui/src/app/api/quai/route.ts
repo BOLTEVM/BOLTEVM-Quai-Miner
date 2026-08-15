@@ -162,6 +162,11 @@ export async function GET(request: Request) {
         });
 
     } catch (_) {
-        return NextResponse.json(defaultResponse);
+        return NextResponse.json({
+            ...defaultResponse,
+            networkHashrate: 'Offline',
+            poolWorkers: 0,
+            offline: true
+        });
     }
 }
