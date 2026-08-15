@@ -105,7 +105,7 @@ wss.on('connection', function connection(ws) {
         disconnectTimeout = null;
     }
 
-    ws.on('message', function message(data) {
+    ws.on('message', async function message(data) {
         try {
             const parsed = JSON.parse(data);
             
@@ -118,26 +118,60 @@ wss.on('connection', function connection(ws) {
                 }
                 
                 if (minerProcess) {
-                    try {
-                        if (process.platform === 'win32') {
-                            spawn('taskkill', ['/pid', minerProcess.pid, '/f', '/t']);
-                        } else {
-                            minerProcess.kill('SIGINT');
-                        }
-                    } catch (e) {}
+                    // Await process death before spawning new one to prevent GPU lock conflicts
+                    await new Promise((resolve) => {
+                        const dying = minerProcess;
+                        dying.on('close', resolve);
+                        try {
+                            if (process.platform === 'win32') {
+                                spawn('taskkill', ['/pid', dying.pid, '/f', '/t']);
+                            } else {
+                                dying.kill('SIGTERM');
+                            }
+                        } catch (e) {}
+                        // Force-resolve after 3 s to prevent hanging on zombie processes
+                        setTimeout(resolve, 3000);
+                    });
+                    minerProcess = null;
                 }
 
                 const executable = getMinerExecutablePath();
                 const targetPool = stratum || 'stratum+tcp://quai-kawpow.kryptex.network:7043';
-                const cleanPoolUrl = targetPool.replace(/^(?:stratum\+(?:tcp|ssl|tls):\/\/)?/, '');
-                const cleanWallet = (wallet && wallet.startsWith('0x') && wallet.length >= 42) ? wallet.trim().toLowerCase() : '0x0000000000000000000000000000000000000000';
-                const cleanWorkerId = (workerId || parsed.workerId || 'bolt-worker-1').trim().replace(/[^a-zA-Z0-9_-]/g, '');
-                const stratumEndpoint = `stratum+tcp://${cleanWallet}.${cleanWorkerId}@${cleanPoolUrl}`;
-                
-                console.log(`Starting miner executable (${executable}) -> ${stratumEndpoint} (mode: ${mode})`);
-                
+
+                // Detect solo mode (points to local Quai node via HTTP RPC)
+                const isSolo = targetPool.startsWith('http://');
+
+                // Preserve SSL protocol if originally specified
+                const protocol = targetPool.startsWith('stratum+ssl') ? 'stratum+ssl://' : 'stratum+tcp://';
+
+                // Strip any protocol prefix to get bare host:port
+                const cleanPoolUrl = targetPool.replace(/^(?:stratum\+(?:tcp|ssl|tls):\/\/|https?:\/\/)/, '');
+
+                const cleanWallet = (wallet && wallet.startsWith('0x') && wallet.length >= 42)
+                    ? wallet.trim().toLowerCase()
+                    : '0x0000000000000000000000000000000000000000';
+                const cleanWorkerId = (workerId || parsed.workerId || 'bolt-worker-1')
+                    .trim()
+                    .replace(/[^a-zA-Z0-9_-]/g, '');
+
+                // Kryptex uses wallet/worker format; all others use wallet.worker
+                const poolId = (parsed.payload?.pool || parsed.pool || 'kryptex');
+                const walletFmt = poolId === 'kryptex'
+                    ? `${cleanWallet}/${cleanWorkerId}`
+                    : `${cleanWallet}.${cleanWorkerId}`;
+
+                // Solo mode: pass HTTP RPC URL directly; stratum pools get password appended
+                const stratumEndpoint = isSolo
+                    ? `http://${cleanPoolUrl}`
+                    : `${protocol}${walletFmt}:x@${cleanPoolUrl}`;
+
+                console.log(`Starting miner executable (${executable}) -> ${stratumEndpoint} (mode: ${mode}, pool: ${poolId})`);
+
                 const args = ['-P', stratumEndpoint];
-                if (mode === 'cpu') {
+                if (isSolo) {
+                    // Solo mining against local go-quai node via getwork
+                    args.push('-G');
+                } else if (mode === 'cpu') {
                     args.push('--cpu');
                 } else if (mode === 'gpu') {
                     args.push('-U', '--cuda-grid-size', '2048', '--cuda-block-size', '128', '--cuda-streams', '2');

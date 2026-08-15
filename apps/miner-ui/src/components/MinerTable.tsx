@@ -14,7 +14,7 @@ export interface WorkerItem {
   hashrate: string;
   numericHashrate: number;
   temp: string;
-  status: 'Online' | 'Rebooting...' | 'Paused' | 'Offline';
+  status: 'Online' | 'Rebooting' | 'Paused' | 'Offline' | 'Error';
   targetPool?: string;
   intensity?: string;
 }
@@ -151,7 +151,7 @@ export default function MinerTable({ refreshTrigger, onToast }: MinerTableProps)
   const handleReboot = (workerId: string) => {
     onToast?.(`Initiating reboot sequence for ${workerId}...`, 'warning');
 
-    setWorkers(prev => prev.map(w => w.id === workerId ? { ...w, status: 'Rebooting...' } : w));
+    setWorkers(prev => prev.map(w => w.id === workerId ? { ...w, status: 'Rebooting' as const } : w));
 
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify({ type: 'REBOOT', targetWorker: workerId }));
@@ -227,7 +227,7 @@ export default function MinerTable({ refreshTrigger, onToast }: MinerTableProps)
               <td>
                 <span className={`status-pill ${
                   miner.status === 'Online' ? 'online' :
-                  miner.status === 'Rebooting...' ? 'warning' :
+                  miner.status === 'Rebooting' ? 'warning' :
                   miner.status === 'Paused' ? 'paused' : 'offline'
                 }`}>
                   {miner.status}
@@ -237,10 +237,10 @@ export default function MinerTable({ refreshTrigger, onToast }: MinerTableProps)
                 <button
                   className="action-btn reboot-btn"
                   title="Reboot Worker"
-                  disabled={miner.status === 'Rebooting...'}
+                  disabled={miner.status === 'Rebooting'}
                   onClick={() => handleReboot(miner.id)}
                 >
-                  <RotateCw size={14} className={miner.status === 'Rebooting...' ? 'spin' : ''} />
+                  <RotateCw size={14} className={miner.status === 'Rebooting' ? 'spin' : ''} />
                   <span>Reboot</span>
                 </button>
 

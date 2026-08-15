@@ -82,7 +82,7 @@ export default function MinersPage() {
       hashrate: workerCategory === 'gpu' ? '450.00 MH/s' : '22.50 MH/s',
       numericHashrate: workerCategory === 'gpu' ? 450 : 22.5,
       temp: workerCategory === 'gpu' ? '61°C' : '49°C',
-      status: 'Online',
+      status: 'Online' as const,
       targetPool: stratumPool,
       intensity: intensity
     };

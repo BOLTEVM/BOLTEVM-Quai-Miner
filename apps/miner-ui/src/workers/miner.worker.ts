@@ -20,10 +20,10 @@ const WARMUP_HYSTERESIS_MS = 20000; // 20-second initial DAG generation grace pe
 const STALL_TIMEOUT_MS = 5000;       // 5-second zero-hashrate auto-recovery threshold
 
 self.onmessage = (e: MessageEvent) => {
-    const { type, intensity, wallet, mode, gpus, cpu, profile, stratum } = e.data;
+    const { type, intensity, wallet, mode, gpus, cpu, profile, stratum, workerId, pool } = e.data;
 
     if (type === 'START') {
-        startMining({ intensity, wallet, mode, gpus, cpu, profile, stratum });
+        startMining({ intensity, wallet, mode, gpus, cpu, profile, stratum, workerId, pool });
     } else if (type === 'STOP') {
         stopMining();
     }

@@ -81,8 +81,11 @@ export default function Dashboard() {
         if (data && typeof data === 'object') {
           setStats(prev => ({
             ...prev,
-            networkHashrate: data.networkHashrate || prev.networkHashrate || '185.0 GH/s',
-            totalRewards: data.totalPaid || prev.totalRewards || '0.00 QUAI'
+            networkHashrate: data.networkHashrate || prev.networkHashrate || '33.8 GH/s',
+            totalRewards: data.pendingBalance || data.totalPaid || prev.totalRewards || '0.0000 QUAI',
+            activeWorkers: data.activeWorkers > 0
+              ? `${data.activeWorkers} / ${data.activeWorkers}`
+              : prev.activeWorkers
           }));
         }
       } catch (error) {
@@ -125,12 +128,17 @@ export default function Dashboard() {
     }
   }, [measuredHashrate]);
 
-  // Combined rewards (Confirmed + Session)
+  // Pool pending balance is the live "earned" value before payout threshold (20 QUAI)
+  // Confirmed = what was actually paid out on-chain; Pending = what pool owes you
   const confirmedRewards = parseFloat(stats.totalRewards.split(' ')[0]) || 0;
-  const totalCombined = (confirmedRewards + sessionRewards).toFixed(2);
-  const rewardTrend = sessionRewards > 0
-    ? (confirmedRewards > 0 ? (sessionRewards / confirmedRewards) * 100 : 100)
-    : undefined;
+  const totalCombined = confirmedRewards > 0
+    ? confirmedRewards.toFixed(4)
+    : sessionRewards > 0
+    ? sessionRewards.toFixed(2)
+    : '0.0000';
+  const rewardTrend = confirmedRewards > 0
+    ? Math.min(((confirmedRewards / 20) * 100), 999)  // progress toward 20 QUAI payout threshold
+    : sessionRewards > 0 ? 50 : undefined;
 
   return (
     <div className="dashboard-container">
@@ -170,7 +178,11 @@ export default function Dashboard() {
           <StatCard
             title="Total Rewards"
             value={`${totalCombined} QUAI`}
-            subValue={`${confirmedRewards.toFixed(4)} Confirmed | +${sessionRewards.toFixed(2)} Est. (${validShares} valid${staleShares > 0 ? `, ${staleShares} stale` : ''})`}
+            subValue={
+              confirmedRewards > 0
+                ? `${confirmedRewards.toFixed(4)} Pending (pool) | Min payout: 20 QUAI`
+                : `0.0000 Paid | +${sessionRewards.toFixed(2)} Est. (${validShares} valid${staleShares > 0 ? `, ${staleShares} stale` : ''})`
+            }
             icon={Database}
             live={isMining}
             trend={rewardTrend}

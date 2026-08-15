@@ -72,7 +72,7 @@ export default function MiningConsole({ onBlockFound, onHashrateUpdate, onShareA
     // Initial logs
     addLog('BoltEVM Miner v1.0.4 initialized...', 'info');
     addLog(`Connecting to Mining Pool: ${poolUrl}`, 'info');
-    addLog('Auth check complete. Worker: bolt-worker-16', 'success');
+    addLog(`Auth check complete. Worker: ${parsedState.workerId || 'bolt-worker-1'}`, 'success');
 
     if (isMiningActive) {
       addLog(`Hardware Pipeline Initialized. Profile: ${parsedState.profile || 'balanced'} | Mode: ${parsedState.mode || 'gpu'}`, 'success');
@@ -89,7 +89,9 @@ export default function MiningConsole({ onBlockFound, onHashrateUpdate, onShareA
         gpus: parsedState.gpus || [],
         cpu: parsedState.cpu || null,
         profile: parsedState.profile || 'balanced',
-        stratum: poolUrl
+        stratum: poolUrl,
+        workerId: parsedState.workerId || 'bolt-worker-1',
+        pool: parsedState.pool || 'kryptex'
       });
 
       minerWorker.onmessage = (e) => {

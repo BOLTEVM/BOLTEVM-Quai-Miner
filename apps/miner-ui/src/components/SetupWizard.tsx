@@ -21,11 +21,11 @@ const networks = [
 ];
 
 const pools = [
-    { id: 'kryptex', name: 'Kryptex (Live Mainnet Pool)', url: 'stratum+tcp://quai-kawpow.kryptex.network:7043', desc: 'Recommended, high hashrate & stable connection.' },
-    { id: 'herominers', name: 'HeroMiners', url: 'stratum+tcp://us.quai.herominers.com:1185', desc: 'High hashrate, global coverage.' },
-    { id: 'k1pool', name: 'K1Pool', url: 'stratum+tcp://us.quaikawpow.k1pool.com:3344', desc: 'Low latency, reliable stratum.' },
-    { id: 'bolt', name: 'BoltPool (Local Stratum)', url: 'stratum+tcp://127.0.0.1:3333', desc: 'Local stratum daemon emulator for testing.' },
-    { id: 'solo', name: 'Solo (Local Node)', url: 'stratum+tcp://127.0.0.1:3333', desc: 'Mine directly to your own local node.' },
+    { id: 'kryptex',    name: 'Kryptex (Live Mainnet Pool)',  url: 'stratum+tcp://quai-kawpow.kryptex.network:7043', desc: 'Recommended, high hashrate & stable connection.' },
+    { id: 'herominers', name: 'HeroMiners',                    url: 'stratum+tcp://us.quai.herominers.com:1185',       desc: 'High hashrate, global coverage.' },
+    { id: 'k1pool',     name: 'K1Pool',                        url: 'stratum+tcp://us.quaikawpow.k1pool.com:3344',     desc: 'Low latency, reliable stratum. Requires K1Pool account ID.' },
+    { id: 'bolt',       name: 'BoltPool (Local Stratum)',       url: 'stratum+tcp://127.0.0.1:3333',                   desc: 'Requires local stratum daemon running on port 3333.' },
+    { id: 'solo',       name: 'Solo (Local Node)',              url: 'http://127.0.0.1:8610',                          desc: 'Mine directly to your own go-quai node (must be running).' },
 ];
 
 export default function SetupWizard() {
@@ -297,7 +297,11 @@ export default function SetupWizard() {
                                 <h3>2. Mining Pool</h3>
                                 <div className="option-list pool-list">
                                     {pools.map(p => (
-                                        <div key={p.id} className={`option-card ${selectedPool === p.id ? 'selected' : ''}`} onClick={() => setSelectedPool(p.id)}>
+                                        <div
+                                            key={p.id}
+                                            className={`option-card ${selectedPool === p.id ? 'selected' : ''}`}
+                                            onClick={() => setSelectedPool(p.id)}
+                                        >
                                             <div>
                                                 <h4>{p.name}</h4>
                                                 <p className="pool-desc">{p.desc}</p>
@@ -308,11 +312,39 @@ export default function SetupWizard() {
                             </div>
                         </div>
 
+                        {/* K1Pool account ID warning */}
+                        {selectedPool === 'k1pool' && (
+                            <div className="node-setup-box glass-card animate-in" style={{ borderLeft: '3px solid #ffcc00', marginTop: 16 }}>
+                                <div className="setup-header" style={{ color: '#ffcc00' }}>
+                                    <span>⚠️ K1Pool requires an account ID</span>
+                                </div>
+                                <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '8px 0 0 0' }}>
+                                    K1Pool does not accept raw Quai wallet addresses. In the Rewards step,
+                                    enter your <strong>K1Pool Account ID</strong> (format: <code>Kr_XXXXXXXX</code>).
+                                    Create one at <a href="https://k1pool.com/pool/quai-kawpow" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-cyan)' }}>k1pool.com</a>.
+                                </p>
+                            </div>
+                        )}
+
+                        {/* BoltPool prerequisite warning */}
+                        {selectedPool === 'bolt' && (
+                            <div className="node-setup-box glass-card animate-in" style={{ borderLeft: '3px solid #ff453a', marginTop: 16 }}>
+                                <div className="setup-header" style={{ color: '#ff453a' }}>
+                                    <span>⚠️ Local Stratum Daemon Required</span>
+                                </div>
+                                <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '8px 0 0 0' }}>
+                                    BoltPool requires a local stratum proxy running on <code>127.0.0.1:3333</code>.
+                                    Connection will fail immediately if no daemon is running.
+                                </p>
+                            </div>
+                        )}
+
+                        {/* Solo node setup */}
                         {selectedPool === 'solo' && (
                             <div className="node-setup-box glass-card animate-in">
                                 <div className="setup-header">
                                     <Terminal size={16} />
-                                    <span>Local Node Toolchain (Ubuntu)</span>
+                                    <span>Local go-quai Node Required (HTTP RPC: 127.0.0.1:8610)</span>
                                 </div>
                                 {nodeSetupLogs.length > 0 && (
                                     <div className="mini-terminal">
@@ -532,6 +564,7 @@ export default function SetupWizard() {
                         </div>
                         <button className="btn-primary large" onClick={() => {
                             const cleanWallet = normalizeQuaiAddress(wallet);
+                            const selectedPoolData = pools.find(p => p.id === selectedPool);
                             localStorage.setItem('miner_state', JSON.stringify({
                                 active: true,
                                 mode: miningMode,
@@ -542,7 +575,8 @@ export default function SetupWizard() {
                                 optimized: buildSuccess,
                                 network: selectedNetwork,
                                 pool: selectedPool,
-                                stratum: pools.find(p => p.id === selectedPool)?.url
+                                stratum: selectedPoolData?.url,
+                                workerId: `bolt-worker-${Date.now().toString(36).slice(-4)}`
                             }));
                             window.location.href = '/';
                         }}>Launch BoltEVM Miner</button>

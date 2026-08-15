@@ -20,8 +20,8 @@ export interface CustomWorker {
   hardwareCategory: 'gpu' | 'cpu' | 'remote';
   hashrate: string;
   numericHashrate: number;
-  status: 'Online' | 'Rebooting' | 'Paused' | 'Error';
-  temp?: number;
+  status: 'Online' | 'Rebooting' | 'Paused' | 'Error' | 'Offline';
+  temp?: string | number;
 }
 
 export interface MinerState {
